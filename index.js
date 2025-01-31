@@ -134,22 +134,15 @@ bot.action("confirm_buy", async (ctx) => {
     // 🔥 Get current gas price dynamically
     const gasPrice = await web3.eth.getGasPrice();
 
-    // 🔥 Define Swap Path
-    const path = ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut]; // RON → Token
-
-    // 🔥 Estimate token output to avoid slippage issues
-    const amountsOut = await routerContract.methods.getAmountsOut(amountInWei, path).call();
-    const amountOutMin = web3.utils.toBN(amountsOut[1]).mul(web3.utils.toBN(95)).div(web3.utils.toBN(100)); // 5% Slippage
-
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       value: amountInWei,
-      gas: 2000000,
-      gasPrice: gasPrice,
+      gas: 2000000,  // ✅ Ensure gas is defined
+      gasPrice: gasPrice, // ✅ Use the latest gas price
       data: routerContract.methods.swapExactETHForTokens(
-        amountOutMin.toString(), // ✅ Minimum tokens expected
-        path,
+        0,
+        ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
         recipient,
         Math.floor(Date.now() / 1000) + 60 * 10
       ).encodeABI()
@@ -159,6 +152,14 @@ bot.action("confirm_buy", async (ctx) => {
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
     ctx.reply(`✅ Swap successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
+    
+    // 🔥 Fetch and display the updated balance
+    const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenOut);
+    const newBalance = await tokenContract.methods.balanceOf(recipient).call();
+    const decimals = await tokenContract.methods.decimals().call();
+    const formattedBalance = web3.utils.fromWei(newBalance, "ether");
+
+    ctx.reply(`📈 New token balance: **${formattedBalance}** tokens`);
   } catch (error) {
     console.error(error);
     ctx.reply("❌ Swap failed. Please try again.");
