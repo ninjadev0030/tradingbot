@@ -114,6 +114,7 @@ bot.action("buy_custom", (ctx) => {
 });
 
 // 🔹 Confirm and Execute Buy
+// 🔹 Confirm and Execute Buy
 bot.action("confirm_buy", async (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -130,11 +131,15 @@ bot.action("confirm_buy", async (ctx) => {
   ctx.reply(`🔄 Swapping **${session.amountInRON} RON** for tokens on Katana...`);
 
   try {
+    // 🔥 Get current gas price dynamically
+    const gasPrice = await web3.eth.getGasPrice();
+
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       value: amountInWei,
-      gas: 2000000,
+      gas: 2000000,  // ✅ Ensure gas is defined
+      gasPrice: gasPrice, // ✅ Use the latest gas price
       data: routerContract.methods.swapExactETHForTokens(
         0,
         ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
@@ -154,6 +159,7 @@ bot.action("confirm_buy", async (ctx) => {
 
   userSessions.delete(userId);
 });
+
 
 // 🔹 Cancel Trade
 bot.action("cancel_trade", (ctx) => {
