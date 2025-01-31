@@ -1,9 +1,9 @@
 require("dotenv").config();
 const { Telegraf, Markup } = require("telegraf");
-const Web3 = require("web3");
+const { Web3 } = require("web3");
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
-const web3 = new Web3("https://api.roninchain.com/rpc");
+const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+const web3 = new Web3(new Web3.providers.HttpProvider("https://api.roninchain.com/rpc"));
 
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
