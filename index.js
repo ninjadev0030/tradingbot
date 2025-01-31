@@ -49,21 +49,24 @@ bot.on("text", async (ctx) => {
         return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
       }
       session.step = "awaiting_ron_amount";
-      ctx.reply("✅ Token address saved!\nNow, enter the **amount of RON** you want to spend.");
-    } else if (session.step === "awaiting_ron_amount") {
+
+      // Ask for RON amount with preset buttons
+      ctx.reply(
+        "✅ Token address saved!\nNow, enter the **amount of RON** you want to spend or choose a pre-set amount.",
+        Markup.inlineKeyboard([
+          [Markup.button.callback("10 RON", "buy_10"), Markup.button.callback("25 RON", "buy_25")],
+          [Markup.button.callback("50 RON", "buy_50"), Markup.button.callback("100 RON", "buy_100")],
+          [Markup.button.callback("Enter Custom Amount", "buy_custom")]
+        ])
+      );
+    } else if (session.step === "awaiting_custom_ron") {
       const amountInRON = ctx.message.text.trim();
       if (isNaN(amountInRON) || parseFloat(amountInRON) <= 0) {
         return ctx.reply("❌ Invalid RON amount. Please enter a valid number.");
       }
       session.amountInRON = amountInRON;
       session.step = "confirming_trade";
-
-      ctx.reply(`✅ You are about to swap **${amountInRON} RON** for tokens at **${session.tokenOut}**.\n\nClick **Confirm** to proceed.`,
-        Markup.inlineKeyboard([
-          [Markup.button.callback("✅ Confirm Trade", "confirm_buy")],
-          [Markup.button.callback("❌ Cancel", "cancel_trade")]
-        ])
-      );
+      confirmTrade(ctx, session);
     }
   }
 });
@@ -79,6 +82,35 @@ bot.action("buy", (ctx) => {
 
   ctx.reply("🔹 Enter the **Token Address** you want to buy.");
   userSessions.set(userId, { step: "awaiting_token_address", account: session.account });
+});
+
+// 🔹 Handle Pre-set Buy Amounts
+["10", "25", "50", "100"].forEach((amount) => {
+  bot.action(`buy_${amount}`, (ctx) => {
+    const userId = ctx.from.id;
+    const session = userSessions.get(userId);
+
+    if (!session || session.step !== "awaiting_ron_amount") {
+      return ctx.reply("⚠ Please start the buy process again by clicking 'Buy'.");
+    }
+
+    session.amountInRON = amount;
+    session.step = "confirming_trade";
+    confirmTrade(ctx, session);
+  });
+});
+
+// 🔹 Handle Custom Buy Amount
+bot.action("buy_custom", (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+
+  if (!session || session.step !== "awaiting_ron_amount") {
+    return ctx.reply("⚠ Please start the buy process again by clicking 'Buy'.");
+  }
+
+  session.step = "awaiting_custom_ron";
+  ctx.reply("🔹 Enter the **amount of RON** you want to spend.");
 });
 
 // 🔹 Confirm and Execute Buy
@@ -123,12 +155,23 @@ bot.action("confirm_buy", async (ctx) => {
   userSessions.delete(userId);
 });
 
-// 🔸 Cancel Trade
+// 🔹 Cancel Trade
 bot.action("cancel_trade", (ctx) => {
   const userId = ctx.from.id;
   userSessions.delete(userId);
   ctx.reply("❌ Trade canceled.");
 });
+
+// 🔹 Confirm Trade Function
+function confirmTrade(ctx, session) {
+  ctx.reply(
+    `✅ You are about to swap **${session.amountInRON} RON** for tokens at **${session.tokenOut}**.\n\nClick **Confirm** to proceed.`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback("✅ Confirm Trade", "confirm_buy")],
+      [Markup.button.callback("❌ Cancel", "cancel_trade")]
+    ])
+  );
+}
 
 // Copy Trade Feature
 bot.action("copy_trade", (ctx) => ctx.reply("Copy trading activated!"));
