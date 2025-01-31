@@ -134,15 +134,22 @@ bot.action("confirm_buy", async (ctx) => {
     // 🔥 Get current gas price dynamically
     const gasPrice = await web3.eth.getGasPrice();
 
+    // 🔥 Define Swap Path
+    const path = ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut]; // RON → Token
+
+    // 🔥 Estimate token output to avoid slippage issues
+    const amountsOut = await routerContract.methods.getAmountsOut(amountInWei, path).call();
+    const amountOutMin = web3.utils.toBN(amountsOut[1]).mul(web3.utils.toBN(95)).div(web3.utils.toBN(100)); // 5% Slippage
+
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       value: amountInWei,
-      gas: 2000000,  // ✅ Ensure gas is defined
-      gasPrice: gasPrice, // ✅ Use the latest gas price
+      gas: 2000000,
+      gasPrice: gasPrice,
       data: routerContract.methods.swapExactETHForTokens(
-        0,
-        ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
+        amountOutMin.toString(), // ✅ Minimum tokens expected
+        path,
         recipient,
         Math.floor(Date.now() / 1000) + 60 * 10
       ).encodeABI()
