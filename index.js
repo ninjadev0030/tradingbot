@@ -2,12 +2,10 @@ require("dotenv").config();
 const { Telegraf, Markup } = require("telegraf");
 const { Web3 } = require("web3");
 const fs = require("fs");
-// const { abi: KATANA_ROUTER_ABI } = require("./katanaRouterABI.json");
-// const { abi: ERC20_ABI } = require("./erc20ABI.json"); // ERC20 ABI for token approval
+
 const KATANA_ROUTER_ABI = JSON.parse(fs.readFileSync("./katanaRouterABI.json", "utf8"));
 const ERC20_ABI = JSON.parse(fs.readFileSync("./erc20ABI.json", "utf8"));
-// console.log(KATANA_ROUTER_ABI);
-// console.log(Array.isArray(ERC20_ABI))
+
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const web3 = new Web3(new Web3.providers.HttpProvider("https://api.roninchain.com/rpc"));
 
@@ -18,7 +16,7 @@ const userSessions = new Map(); // Store user wallet sessions
 
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
-  [Markup.button.callback("🔹 Buy", "buy"), Markup.button.callback("🔸 Sell", "sell")],
+  [Markup.button.callback("🔹 Buy", "buy_preset"), Markup.button.callback("🔸 Sell", "sell_preset")],
   [Markup.button.callback("🔗 Connect Wallet", "connect_wallet"), Markup.button.callback("📋 Copy Trade", "copy_trade")]
 ]);
 
@@ -47,8 +45,73 @@ bot.on("text", async (ctx) => {
   }
 });
 
-// Buy Token (RON → AXS)
-bot.action("buy", async (ctx) => {
+// 🔹 Buy Command: Allows users to specify amount and token
+bot.command("buy", async (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+
+  if (!session || session.step !== "connected") {
+    return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
+  }
+
+  const args = ctx.message.text.split(" ");
+  if (args.length < 3) {
+    return ctx.reply("⚠ Usage: `/buy <amount in RON> <token_address>`\nExample: `/buy 10 0xa8754b9fa15fc18bb59458815510e40a12cd2014`", { parse_mode: "Markdown" });
+  }
+
+  const account = session.account;
+  const recipient = account.address;
+  const amountInRON = args[1];
+  const tokenOut = args[2];
+
+  if (isNaN(amountInRON) || parseFloat(amountInRON) <= 0) {
+    return ctx.reply("❌ Invalid amount. Please enter a valid number.");
+  }
+
+  const amountInWei = web3.utils.toWei(amountInRON, "ether");
+
+  ctx.reply(`🔄 Swapping **${amountInRON} RON** for tokens on Katana...`);
+
+  try {
+    const tx = {
+      from: recipient,
+      to: KATANA_ROUTER_ADDRESS,
+      value: amountInWei,
+      gas: 2000000,
+      data: routerContract.methods.swapExactETHForTokens(
+        0,
+        ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
+        recipient,
+        Math.floor(Date.now() / 1000) + 60 * 10
+      ).encodeABI()
+    };
+
+    const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+    ctx.reply(`✅ Swap successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
+  } catch (error) {
+    console.error(error);
+    ctx.reply("❌ Swap failed. Please try again.");
+  }
+});
+
+// 🔸 Pre-set Buy Buttons
+bot.action("buy_preset", (ctx) => {
+  ctx.reply("Select an amount to buy:", Markup.inlineKeyboard([
+    [Markup.button.callback("10 RON", "buy_10"), Markup.button.callback("25 RON", "buy_25")],
+    [Markup.button.callback("50 RON", "buy_50"), Markup.button.callback("100 RON", "buy_100")]
+  ]));
+});
+
+// Handling Pre-set Buy Amounts (Default Token: AXS)
+const defaultToken = "0xa8754b9fa15fc18bb59458815510e40a12cd2014"; // Default: AXS Token
+["10", "25", "50", "100"].forEach(amount => {
+  bot.action(`buy_${amount}`, (ctx) => executeBuy(ctx, amount, defaultToken));
+});
+
+// Function to Handle Pre-set Buy Transactions
+async function executeBuy(ctx, amountInRON, tokenOut) {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
 
@@ -58,10 +121,9 @@ bot.action("buy", async (ctx) => {
 
   const account = session.account;
   const recipient = account.address;
-  const tokenOut = "0xa8754b9fa15fc18bb59458815510e40a12cd2014"; // AXS Token Address
-  const amountInWei = web3.utils.toWei("0.001", "ether"); // Swap 0.1 RON
+  const amountInWei = web3.utils.toWei(amountInRON, "ether");
 
-  ctx.reply("🔄 Swapping **0.1 RON** for **AXS** on Katana...");
+  ctx.reply(`🔄 Swapping **${amountInRON} RON** for tokens on Katana...`);
 
   try {
     const tx = {
@@ -85,62 +147,7 @@ bot.action("buy", async (ctx) => {
     console.error(error);
     ctx.reply("❌ Swap failed. Please try again.");
   }
-});
-
-// Sell Token (AXS → RON)
-bot.action("sell", async (ctx) => {
-  const userId = ctx.from.id;
-  const session = userSessions.get(userId);
-
-  if (!session || session.step !== "connected") {
-    return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
-  }
-
-  const account = session.account;
-  const recipient = account.address;
-  const tokenIn = "0xa8754b9fa15fc18bb59458815510e40a12cd2014"; // AXS Token Address
-  const amountInWei = web3.utils.toWei("0.001", "ether"); // Swap 1 AXS to RON
-  const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
-
-  ctx.reply("🔄 Approving **1 AXS** for sale...");
-
-  try {
-    // Step 1: Approve Router Contract to spend user's tokens
-    const approveTx = {
-      from: recipient,
-      to: tokenIn,
-      gas: 100000,
-      data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI()
-    };
-
-    const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
-    await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
-
-    ctx.reply("✅ Approval complete. Executing trade...");
-
-    // Step 2: Swap AXS → RON
-    const swapTx = {
-      from: recipient,
-      to: KATANA_ROUTER_ADDRESS,
-      gas: 2000000,
-      data: routerContract.methods.swapExactTokensForETH(
-        amountInWei,
-        0,
-        [tokenIn, "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"], // AXS → RON
-        recipient,
-        Math.floor(Date.now() / 1000) + 60 * 10
-      ).encodeABI()
-    };
-
-    const signedSwapTx = await web3.eth.accounts.signTransaction(swapTx, account.privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedSwapTx.rawTransaction);
-
-    ctx.reply(`✅ Swap successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
-  } catch (error) {
-    console.error(error);
-    ctx.reply("❌ Swap failed. Please try again.");
-  }
-});
+}
 
 // Copy Trade Feature
 bot.action("copy_trade", (ctx) => ctx.reply("Copy trading activated!"));
