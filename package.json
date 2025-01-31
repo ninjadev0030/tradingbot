@@ -1,0 +1,30 @@
+{
+  "name": "tradingbot",
+  "version": "1.0.0",
+  "description": "this is ronin trading bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ninjadev0030/ronin_trading_bot.git"
+  },
+  "keywords": [
+    "ronin"
+  ],
+  "author": "m@ster",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ninjadev0030/ronin_trading_bot/issues"
+  },
+  "homepage": "https://github.com/ninjadev0030/ronin_trading_bot#readme",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "ethers": "^5.7.2",
+    "express": "^4.21.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "telegraf": "^4.16.3",
+    "web3": "^4.16.0"
+  }
+}
