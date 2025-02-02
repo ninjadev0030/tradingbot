@@ -9,7 +9,7 @@ const ERC20_ABI = JSON.parse(fs.readFileSync("./erc20ABI.json", "utf8"));
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const web3 = new Web3(new Web3.providers.HttpProvider("https://api.roninchain.com/rpc"));
 
-const KATANA_ROUTER_ADDRESS = "0xC873fEd316bE69b144Aab81177bd86E6a6cD555F";
+const KATANA_ROUTER_ADDRESS = "0xc05afc8c9353c1dd5f872eccfacd60fd5a2a9ac7";
 const routerContract = new web3.eth.Contract(KATANA_ROUTER_ABI, KATANA_ROUTER_ADDRESS);
 
 const userSessions = new Map(); // Store user wallet sessions
@@ -113,8 +113,6 @@ bot.action("buy_custom", (ctx) => {
   ctx.reply("🔹 Enter the **amount of RON** you want to spend.");
 });
 
-// 🔹 Confirm and Execute Buy
-// 🔹 Confirm and Execute Buy
 bot.action("confirm_buy", async (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -134,17 +132,30 @@ bot.action("confirm_buy", async (ctx) => {
     // 🔥 Get current gas price dynamically
     const gasPrice = await web3.eth.getGasPrice();
 
+    // 🔥 Ensure the token address is valid
+    if (!web3.utils.isAddress(tokenOut)) {
+      return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
+    }
+
+    // 🔥 Define Swap Path (RON → Token)
+    const WRON_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
+    const path = [WRON_ADDRESS, tokenOut];
+
+    // ✅ Set Minimum Output (`amountOutMin`) for Slippage Protection
+    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
+
+    // ✅ Construct Transaction Using `swapExactRONForTokens()`
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
-      value: amountInWei,
-      gas: 2000000,  // ✅ Ensure gas is defined
-      gasPrice: gasPrice, // ✅ Use the latest gas price
-      data: routerContract.methods.swapExactETHForTokens(
-        0,
-        ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
+      value: amountInWei, // 🔥 Ensures enough RON is sent
+      gas: 2000000,
+      gasPrice: gasPrice,
+      data: routerContract.methods.swapExactRONForTokens(
+        amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
+        path,
         recipient,
-        Math.floor(Date.now() / 1000) + 60 * 10
+        Math.floor(Date.now() / 1000) + 60 * 10 // ✅ 10-minute deadline
       ).encodeABI()
     };
 
@@ -152,22 +163,26 @@ bot.action("confirm_buy", async (ctx) => {
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
     ctx.reply(`✅ Swap successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
-    
-    // 🔥 Fetch and display the updated balance
+
+    // ✅ Fetch and Display Updated Token Balance
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenOut);
     const newBalance = await tokenContract.methods.balanceOf(recipient).call();
     const decimals = await tokenContract.methods.decimals().call();
     const formattedBalance = web3.utils.fromWei(newBalance, "ether");
 
-    ctx.reply(`📈 New token balance: **${formattedBalance}** tokens`);
+    ctx.reply(`📈 **New token balance:** ${formattedBalance} tokens`);
   } catch (error) {
-    console.error(error);
-    ctx.reply("❌ Swap failed. Please try again.");
+    console.error("🔴 Swap failed with error:", error);
+
+    if (error.reason) {
+      ctx.reply(`❌ Transaction failed: ${error.reason}`);
+    } else {
+      ctx.reply("❌ Swap failed due to a smart contract error. Please try again.");
+    }
   }
 
   userSessions.delete(userId);
 });
-
 
 // 🔹 Cancel Trade
 bot.action("cancel_trade", (ctx) => {
