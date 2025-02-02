@@ -249,7 +249,7 @@ bot.action("confirm_sell", async (ctx) => {
   try {
     // 🔥 Get gas fees dynamically (EIP-1559 compatible)
     const feeData = await web3.eth.getBlock("latest"); 
-    const gasLimit = 2000000; // ✅ Manually setting gas limit
+    const gasLimit = 3000000; // ✅ Manually setting gas limit
     const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
     const maxFeePerGas = web3.utils.toWei("20", "gwei"); // ✅ Suggested max fee
     let baseGasPrice = await web3.eth.getGasPrice();
