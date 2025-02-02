@@ -203,7 +203,7 @@ function confirmTrade(ctx, session) {
 }
 
 /********* Sell Part ***********/
-// 🔹 Sell Flow: First Ask for Token Address
+// 🔹 Sell Flow: Ask for Token Address First
 bot.action("sell", (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -216,7 +216,7 @@ bot.action("sell", (ctx) => {
   userSessions.set(userId, { step: "awaiting_token_to_sell", account: session.account });
 });
 
-// 🔹 Handle Token Address Input
+// 🔹 Handle Token Address & Ask for Amount
 bot.on("text", async (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -228,8 +228,6 @@ bot.on("text", async (ctx) => {
         return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
       }
       session.step = "awaiting_sell_amount";
-
-      // Ask for Sell Amount
       ctx.reply("✅ Token address saved!\nNow, enter the **amount of tokens** you want to sell.");
     } else if (session.step === "awaiting_sell_amount") {
       const amountInToken = ctx.message.text.trim();
@@ -275,7 +273,7 @@ bot.action("confirm_sell", async (ctx) => {
     // ✅ Set Minimum Output (`amountOutMin`) for Slippage Protection
     const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
 
-    // ✅ Approve Katana Router to Spend User's Tokens
+    // ✅ Check Allowance & Approve Token if Needed
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
     const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
 
