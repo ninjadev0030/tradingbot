@@ -251,7 +251,7 @@ bot.action("confirm_sell", async (ctx) => {
     const feeData = await web3.eth.getBlock("latest");
     const gasLimit = 2000000; // ✅ Manually set gas limit
     const baseFeePerGas = await web3.eth.getGasPrice();
-    const maxPriorityFeePerGas = web3.utils.toWei("10", "gwei"); // ✅ Higher priority fee
+    const maxPriorityFeePerGas = web3.utils.toWei("20", "gwei"); // ✅ Higher priority fee
     const maxFeePerGas = (BigInt(baseFeePerGas) * BigInt(3)).toString();
 
     // 🔥 Ensure the token address is valid
