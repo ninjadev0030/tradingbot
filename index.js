@@ -394,6 +394,7 @@ async function trackCopiedTrades() {
           fromBlock: latestBlock,
           toBlock: latestBlock,
         });
+        console.log(latestTxs.length);
         for (const tx of latestTxs) {
           if (tx.topics.length > 0) {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${tx.transactionHash})`);
