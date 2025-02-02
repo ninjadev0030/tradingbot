@@ -268,7 +268,7 @@ bot.action("confirm_sell", async (ctx) => {
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
     const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
 
-    if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) { // ✅ Fixed
+    // if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) { // ✅ Fixed
       ctx.reply("🔄 Approving tokens for sale...");
       const approveTx = {
         from: recipient,
@@ -279,7 +279,7 @@ bot.action("confirm_sell", async (ctx) => {
       const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
       await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
       ctx.reply("✅ Approval complete. Executing trade...");
-    }
+    // }
 
     // ✅ Construct Transaction Using `swapExactTokensForRON()`
     const tx = {
