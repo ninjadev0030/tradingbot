@@ -394,7 +394,7 @@ async function trackCopiedTrades() {
         let config = {
           method: 'get',
           maxBodyLength: Infinity,
-          url: 'https://api-gateway.skymavis.com/skynet/ronin/web3/v2/accounts/'+'0x23e6dB0a0c928D5E36CdC12a7732610B394BD2C3'+'/txs',
+          url: 'https://api-gateway.skymavis.com/skynet/ronin/web3/v2/accounts/'+session.walletAddress+'/txs',
           headers: { 
             'Accept': 'application/json', 
             'X-API-KEY': 'H0ec1VBHSyEznM0Myjdoug6hDu37ygh6'
