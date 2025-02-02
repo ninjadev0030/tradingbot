@@ -247,12 +247,15 @@ bot.action("confirm_sell", async (ctx) => {
   ctx.reply(`🔄 Selling **${session.amountInToken}** tokens for RON on Katana...`);
 
   try {
-    // 🔥 Get gas fees dynamically (EIP-1559 compatible)
-    const feeData = await web3.eth.getBlock("latest"); 
-    const gasLimit = 3000000; // ✅ Manually setting gas limit
-    const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
-    const maxFeePerGas = web3.utils.toWei("20", "gwei"); // ✅ Suggested max fee
+    // 🔥 Get latest gas price dynamically & increase it to avoid underpricing
     let baseGasPrice = await web3.eth.getGasPrice();
+    let increasedGasPrice = web3.utils.toBN(baseGasPrice).mul(web3.utils.toBN(15)).div(web3.utils.toBN(10)); // +50%
+
+    // 🔥 Get EIP-1559 fee data
+    const gasLimit = 200000; // ✅ Manually set gas limit for approval
+    const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
+    const maxFeePerGas = web3.utils.toBN(baseGasPrice).mul(web3.utils.toBN(2)); // ✅ Set max fee
+
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenIn)) {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
@@ -271,25 +274,30 @@ bot.action("confirm_sell", async (ctx) => {
 
     // if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) {
       ctx.reply("🔄 Approving tokens for sale...");
+
+      // ✅ Construct Approval Transaction with Higher Gas Price
       const approveTx = {
         from: recipient,
         to: tokenIn,
-        gas: gasLimit,
-        maxPriorityFeePerGas: maxPriorityFeePerGas,
-        maxFeePerGas: maxFeePerGas,
+        gas: gasLimit, // ✅ Manually set gas limit
+        gasPrice: increasedGasPrice, // ✅ Increase gas price
+        maxPriorityFeePerGas: maxPriorityFeePerGas, // ✅ Set priority fee
+        maxFeePerGas: maxFeePerGas, // ✅ Set max fee
         data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
       };
+
+      // ✅ Sign and Send Approval Transaction
       const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
       await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
       ctx.reply("✅ Approval complete. Executing trade...");
     // }
 
-    // ✅ Construct Transaction Using `swapExactTokensForRON()`
-    const tx = {
+    // ✅ Construct Sell Transaction Using `swapExactTokensForRON()`
+    const sellTx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
-      gas: gasLimit, // ✅ Set manual gas limit to prevent underestimation
-      gasPrice: baseGasPrice,
+      gas: 2000000, // ✅ Manually set gas limit for the sell transaction
+      gasPrice: increasedGasPrice, // ✅ Increased gas price to prevent underpricing
       maxPriorityFeePerGas: maxPriorityFeePerGas,
       maxFeePerGas: maxFeePerGas,
       data: routerContract.methods.swapExactTokensForRON(
@@ -301,8 +309,8 @@ bot.action("confirm_sell", async (ctx) => {
       ).encodeABI(),
     };
 
-    const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
-    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+    const signedSellTx = await web3.eth.accounts.signTransaction(sellTx, account.privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedSellTx.rawTransaction);
 
     ctx.reply(`✅ Sell successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
 
