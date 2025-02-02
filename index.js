@@ -114,7 +114,6 @@ bot.action("buy_custom", (ctx) => {
 });
 
 // 🔹 Confirm and Execute Buy
-// 🔹 Confirm and Execute Buy
 bot.action("confirm_buy", async (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -139,14 +138,21 @@ bot.action("confirm_buy", async (ctx) => {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
     }
 
-    // 🔥 Encode Swap Command for Katana v3
-    const command = "0x02"; // Swap Command for Katana v3
+    // 🔥 Set correct swap path (WETH needed for some tokens)
+    const WETH_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
+    const path = [WETH_ADDRESS, tokenOut];
+
+    // ✅ Set a safe `amountOutMin` (slippage tolerance)
+    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust this value to avoid failures
+
+    // ✅ Encode the swap command for Katana v3
+    const command = "0x02"; // Swap command for Katana v3
     const inputData = web3.eth.abi.encodeParameters(
       ["address", "address", "uint256", "uint256"],
-      ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut, amountInWei, "1"]
+      [WETH_ADDRESS, tokenOut, amountInWei, amountOutMin]
     );
 
-    // ✅ Construct Transaction
+    // ✅ Construct the transaction
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
@@ -180,8 +186,6 @@ bot.action("confirm_buy", async (ctx) => {
 
   userSessions.delete(userId);
 });
-
-
 
 // 🔹 Cancel Trade
 bot.action("cancel_trade", (ctx) => {
