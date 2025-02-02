@@ -232,6 +232,7 @@ bot.action("sell", (ctx) => {
 });
 
 // 🔹 Confirm and Execute Sell
+// 🔹 Confirm and Execute Sell
 bot.action("confirm_sell", async (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -267,18 +268,18 @@ bot.action("confirm_sell", async (ctx) => {
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
     const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
 
-    // if (web3.utils.toBN(allowance).lt(web3.utils.toBN(amountInWei))) {
-    //   ctx.reply("🔄 Approving tokens for sale...");
-    //   const approveTx = {
-    //     from: recipient,
-    //     to: tokenIn,
-    //     gas: 100000,
-    //     data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
-    //   };
-    //   const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
-    //   await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
-    //   ctx.reply("✅ Approval complete. Executing trade...");
-    // }
+    if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) { // ✅ Fixed
+      ctx.reply("🔄 Approving tokens for sale...");
+      const approveTx = {
+        from: recipient,
+        to: tokenIn,
+        gas: 100000,
+        data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
+      };
+      const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
+      await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
+      ctx.reply("✅ Approval complete. Executing trade...");
+    }
 
     // ✅ Construct Transaction Using `swapExactTokensForRON()`
     const tx = {
@@ -317,6 +318,7 @@ bot.action("confirm_sell", async (ctx) => {
 
   userSessions.delete(userId);
 });
+
 
 // 🔹 Cancel Sell Trade
 bot.action("cancel_sell_trade", (ctx) => {
