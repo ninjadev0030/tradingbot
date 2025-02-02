@@ -92,7 +92,7 @@ bot.on("text", async (ctx) => {
       }
       copyTradeSessions.set(userId, { walletAddress, active: true });
       ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
-      userSessions.delete(userId);
+      // userSessions.delete(userId);
     }
   }
 });
@@ -207,7 +207,7 @@ bot.action("confirm_buy", async (ctx) => {
     }
   }
 
-  userSessions.delete(userId);
+  // userSessions.delete(userId);
 });
 
 // 🔹 Cancel Trade
@@ -336,13 +336,13 @@ bot.action("confirm_sell", async (ctx) => {
     }
   }
 
-  userSessions.delete(userId);
+  // userSessions.delete(userId);
 });
 
 // 🔹 Cancel Sell Trade
 bot.action("cancel_sell_trade", (ctx) => {
   const userId = ctx.from.id;
-  userSessions.delete(userId);
+  // userSessions.delete(userId);
   ctx.reply("❌ Sell trade canceled.");
 });
 
