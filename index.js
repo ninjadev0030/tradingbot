@@ -19,7 +19,7 @@ const copyTradeSessions = new Map(); // Store copy trade sessions
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
   [Markup.button.callback("🔹 Buy", "buy"), Markup.button.callback("🔸 Sell", "sell")],
-  [Markup.button.callback("🔗 Connect Wallet", "connect_wallet"), Markup.button.callback("📋 Copy Trade", "start_copy_trade")]
+  [Markup.button.callback("🔗 Connect Wallet", "connect_wallet"), Markup.button.callback("📋 Copy Trade", "start_copy_trade")],
   [Markup.button.callback("⏸ Pause Copy Trade", "pause_copy_trade"), Markup.button.callback("▶ Resume Copy Trade", "resume_copy_trade")]
 ]);
 
