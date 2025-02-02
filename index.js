@@ -359,6 +359,13 @@ function confirmSellTrade(ctx, session) {
 
 // ✅ Copy Trade Setup from Button
 bot.action("start_copy_trade", (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+  
+  if (!session || session.step !== "connected") {
+    return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
+  }
+  
   ctx.reply("Please enter the wallet address you want to copy trades from.");
   userSessions.set(ctx.from.id, { step: "awaiting_copy_wallet" });
 });
