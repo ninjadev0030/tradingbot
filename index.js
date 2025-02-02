@@ -20,6 +20,7 @@ const copyTradeSessions = new Map(); // Store copy trade sessions
 const mainMenu = Markup.inlineKeyboard([
   [Markup.button.callback("🔹 Buy", "buy"), Markup.button.callback("🔸 Sell", "sell")],
   [Markup.button.callback("🔗 Connect Wallet", "connect_wallet"), Markup.button.callback("📋 Copy Trade", "start_copy_trade")]
+  [Markup.button.callback("⏸ Pause Copy Trade", "pause_copy_trade"), Markup.button.callback("▶ Resume Copy Trade", "resume_copy_trade")]
 ]);
 
 bot.start((ctx) => ctx.reply("Welcome to Ronin Trading Bot!", mainMenu));
@@ -406,7 +407,7 @@ async function trackCopiedTrades() {
           var lastItem = tmp[0];
           if(Number(networkTimestamp) - lastItem.blockTime < 5) {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${lastItem.transactionHash})`);
-            // executeCopyTrade(userId, session.walletAddress, lastItem);
+            executeCopyTrade(userId, session.walletAddress, lastItem);
           }
         })
         .catch((error) => {
@@ -447,6 +448,27 @@ async function executeCopyTrade(userId, walletAddress, tx) {
     bot.telegram.sendMessage(userId, "❌ Failed to execute copied trade.");
   }
 }
+
+// Pause Copy Trading
+bot.action("pause_copy_trade", (ctx) => {
+  if (copyTradeSessions.has(ctx.from.id)) {
+    copyTradeSessions.get(ctx.from.id).active = false;
+    ctx.reply("⏸ Copy trading paused.");
+  } else {
+    ctx.reply("❌ No active copy trade found.");
+  }
+});
+
+// Resume Copy Trading
+bot.action("resume_copy_trade", (ctx) => {
+  if (copyTradeSessions.has(ctx.from.id)) {
+    copyTradeSessions.get(ctx.from.id).active = true;
+    ctx.reply("▶ Copy trading resumed.");
+  } else {
+    ctx.reply("❌ No active copy trade found.");
+  }
+});
+
 // Start tracking trades
 trackCopiedTrades();
 
