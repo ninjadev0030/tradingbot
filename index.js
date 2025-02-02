@@ -388,9 +388,11 @@ async function trackCopiedTrades() {
       if (!session.active) continue;
       console.log(session.walletAddress);  
       try {
+        const latestBlock = await web3.eth.getBlockNumber();
         const latestTxs = await web3.eth.getPastLogs({
           address: session.walletAddress,
-          fromBlock: "latest",
+          fromBlock: latestBlock,
+          toBlock: latestBlock,
         });
         for (const tx of latestTxs) {
           if (tx.topics.length > 0) {
