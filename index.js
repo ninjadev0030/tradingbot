@@ -83,6 +83,14 @@ bot.on("text", async (ctx) => {
       session.amountInToken = amountInToken;
       session.step = "confirming_sell_trade";
       confirmSellTrade(ctx, session);
+    } if (session && session.step === "awaiting_copy_wallet") {
+      const walletAddress = ctx.message.text.trim();
+      if (!web3.utils.isAddress(walletAddress)) {
+        return ctx.reply("❌ Invalid wallet address. Please enter a valid Ethereum/Ronin address.");
+      }
+      copyTradeSessions.set(userId, { walletAddress, active: true });
+      ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
+      userSessions.delete(userId);
     }
   }
 });
@@ -351,21 +359,6 @@ function confirmSellTrade(ctx, session) {
 bot.action("start_copy_trade", (ctx) => {
   ctx.reply("Please enter the wallet address you want to copy trades from.");
   userSessions.set(ctx.from.id, { step: "awaiting_copy_wallet" });
-});
-
-bot.on("text", async (ctx) => {
-  const userId = ctx.from.id;
-  const session = userSessions.get(userId);
-  
-  if (session && session.step === "awaiting_copy_wallet") {
-    const walletAddress = ctx.message.text.trim();
-    if (!web3.utils.isAddress(walletAddress)) {
-      return ctx.reply("❌ Invalid wallet address. Please enter a valid Ethereum/Ronin address.");
-    }
-    copyTradeSessions.set(userId, { walletAddress, active: true });
-    ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
-    userSessions.delete(userId);
-  }
 });
 
 // ✅ Pause Copy Trading
