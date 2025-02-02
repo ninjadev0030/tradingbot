@@ -252,7 +252,7 @@ bot.action("confirm_sell", async (ctx) => {
     let increasedGasPrice = BigInt(baseGasPrice) * BigInt(15) / BigInt(10); // +50%
 
     // 🔥 Get EIP-1559 fee data
-    const gasLimit = 200000; // ✅ Manually set gas limit for approval
+    const gasLimit = 100000; // ✅ Manually set gas limit for approval
     const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
     const maxFeePerGas = BigInt(baseGasPrice) * BigInt(2); // ✅ Set max fee
 
