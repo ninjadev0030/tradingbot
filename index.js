@@ -407,7 +407,7 @@ async function trackCopiedTrades() {
           var lastItem = tmp[0];
           if(networkTimestamp - lastItem.blockTime < 5) {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${tx.transactionHash})`);
-            executeCopyTrade(userId, session.walletAddress, lastItem);
+            // executeCopyTrade(userId, session.walletAddress, lastItem);
           }
         })
         .catch((error) => {
