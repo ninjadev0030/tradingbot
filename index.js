@@ -41,7 +41,9 @@ bot.on("text", async (ctx) => {
       try {
         const account = web3.eth.accounts.privateKeyToAccount(privateKey);
         web3.eth.accounts.wallet.add(account);
-        userSessions.set(userId, { step: "connected", account });
+        session.account = account;  // ✅ Store wallet persistently
+        session.step = "connected";
+        userSessions.set(userId, session);
         ctx.reply(`✅ Successfully connected!\nYour Ronin Address: \`${account.address}\``);
       } catch (error) {
         ctx.reply("❌ Invalid private key. Please try again.");
@@ -102,12 +104,16 @@ bot.action("buy", (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
 
-  if (!session || session.step !== "connected") {
+  if (!session || !session.account) {
     return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
   }
 
+  // ctx.reply("🔹 Enter the **Token Address** you want to buy.");
+  // userSessions.set(userId, { step: "awaiting_token_address", account: session.account });
+  session.step = "awaiting_token_address";  // ✅ Retain account, only update step
+  userSessions.set(userId, session);
+  
   ctx.reply("🔹 Enter the **Token Address** you want to buy.");
-  userSessions.set(userId, { step: "awaiting_token_address", account: session.account });
 });
 
 // 🔹 Handle Pre-set Buy Amounts
@@ -234,12 +240,16 @@ bot.action("sell", (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
 
-  if (!session || session.step !== "connected") {
+  if (!session || !session.account) {
     return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
   }
 
+  // ctx.reply("🔸 Enter the **Token Address** you want to sell.");
+  // userSessions.set(userId, { step: "awaiting_token_to_sell", account: session.account });
+  session.step = "awaiting_token_to_sell";  // ✅ Retain account, only update step
+  userSessions.set(userId, session);
+  
   ctx.reply("🔸 Enter the **Token Address** you want to sell.");
-  userSessions.set(userId, { step: "awaiting_token_to_sell", account: session.account });
 });
 
 bot.action("confirm_sell", async (ctx) => {
