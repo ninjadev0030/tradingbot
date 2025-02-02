@@ -386,7 +386,7 @@ async function trackCopiedTrades() {
   setInterval(async () => {
     for (const [userId, session] of copyTradeSessions.entries()) {
       if (!session.active) continue;
-      console.log("tracks");  
+      console.log(session.walletAddress);  
       try {
         const latestTxs = await web3.eth.getPastLogs({
           address: session.walletAddress,
