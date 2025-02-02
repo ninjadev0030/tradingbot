@@ -13,6 +13,7 @@ const KATANA_ROUTER_ADDRESS = "0xc05afc8c9353c1dd5f872eccfacd60fd5a2a9ac7";
 const routerContract = new web3.eth.Contract(KATANA_ROUTER_ABI, KATANA_ROUTER_ADDRESS);
 
 const userSessions = new Map(); // Store user wallet sessions
+const copyTradeSessions = new Map(); // Store copy trade sessions
 
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
