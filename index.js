@@ -18,7 +18,7 @@ const copyTradeSessions = new Map(); // Store copy trade sessions
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
   [Markup.button.callback("🔹 Buy", "buy"), Markup.button.callback("🔸 Sell", "sell")],
-  [Markup.button.callback("🔗 Connect Wallet", "connect_wallet"), Markup.button.callback("📋 Copy Trade", "copy_trade")]
+  [Markup.button.callback("🔗 Connect Wallet", "connect_wallet"), Markup.button.callback("📋 Copy Trade", "start_copy_trade")]
 ]);
 
 bot.start((ctx) => ctx.reply("Welcome to Ronin Trading Bot!", mainMenu));
@@ -347,17 +347,25 @@ function confirmSellTrade(ctx, session) {
   );
 }
 
-// Copy Trade Feature
-bot.action("copy_trade", (ctx) => ctx.reply("Copy trading activated!"));
+// ✅ Copy Trade Setup from Button
+bot.action("start_copy_trade", (ctx) => {
+  ctx.reply("Please enter the wallet address you want to copy trades from.");
+  userSessions.set(ctx.from.id, { step: "awaiting_copy_wallet" });
+});
 
-bot.command("copy", (ctx) => {
-  const args = ctx.message.text.split(" ");
-  if (args.length !== 2 || !web3.utils.isAddress(args[1])) {
-    return ctx.reply("❌ Invalid command! Use: `/copy <wallet_address>`");
+bot.on("text", async (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+  
+  if (session && session.step === "awaiting_copy_wallet") {
+    const walletAddress = ctx.message.text.trim();
+    if (!web3.utils.isAddress(walletAddress)) {
+      return ctx.reply("❌ Invalid wallet address. Please enter a valid Ethereum/Ronin address.");
+    }
+    copyTradeSessions.set(userId, { walletAddress, active: true });
+    ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
+    userSessions.delete(userId);
   }
-  const walletAddress = args[1];
-  copyTradeSessions.set(ctx.from.id, { walletAddress, active: true });
-  ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
 });
 
 // ✅ Pause Copy Trading
@@ -431,7 +439,6 @@ async function executeCopyTrade(userId, walletAddress, tx) {
     bot.telegram.sendMessage(userId, "❌ Failed to execute copied trade.");
   }
 }
-
 // Start tracking trades
 trackCopiedTrades();
 
