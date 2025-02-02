@@ -349,6 +349,91 @@ function confirmSellTrade(ctx, session) {
 // Copy Trade Feature
 bot.action("copy_trade", (ctx) => ctx.reply("Copy trading activated!"));
 
+bot.command("copy", (ctx) => {
+  const args = ctx.message.text.split(" ");
+  if (args.length !== 2 || !web3.utils.isAddress(args[1])) {
+    return ctx.reply("❌ Invalid command! Use: `/copy <wallet_address>`");
+  }
+  const walletAddress = args[1];
+  copyTradeSessions.set(ctx.from.id, { walletAddress, active: true });
+  ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
+});
+
+// ✅ Pause Copy Trading
+bot.command("pause_copy", (ctx) => {
+  if (copyTradeSessions.has(ctx.from.id)) {
+    copyTradeSessions.get(ctx.from.id).active = false;
+    ctx.reply("⏸ Copy trading paused.");
+  } else {
+    ctx.reply("❌ No active copy trade found.");
+  }
+});
+
+// ✅ Resume Copy Trading
+bot.command("resume_copy", (ctx) => {
+  if (copyTradeSessions.has(ctx.from.id)) {
+    copyTradeSessions.get(ctx.from.id).active = true;
+    ctx.reply("▶ Copy trading resumed.");
+  } else {
+    ctx.reply("❌ No active copy trade found.");
+  }
+});
+
+// ✅ Track Trades of Copied Wallets
+async function trackCopiedTrades() {
+  setInterval(async () => {
+    for (const [userId, session] of copyTradeSessions.entries()) {
+      if (!session.active) continue;
+      try {
+        const latestTxs = await web3.eth.getPastLogs({
+          address: session.walletAddress,
+          fromBlock: "latest",
+        });
+        for (const tx of latestTxs) {
+          if (tx.topics.length > 0) {
+            bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${tx.transactionHash})`);
+            executeCopyTrade(userId, session.walletAddress, tx);
+          }
+        }
+      } catch (error) {
+        console.error("Error tracking trades:", error);
+      }
+    }
+  }, 30000); // Poll every 30 seconds
+}
+
+// ✅ Execute Copied Trade
+async function executeCopyTrade(userId, walletAddress, tx) {
+  try {
+    const session = userSessions.get(userId);
+    if (!session) return bot.telegram.sendMessage(userId, "⚠ Please connect your wallet to copy trades.");
+    
+    const { account } = session;
+    const gasPrice = await web3.eth.getGasPrice();
+    const txData = await web3.eth.getTransaction(tx.transactionHash);
+    
+    const copiedTx = {
+      from: account.address,
+      to: txData.to,
+      value: txData.value,
+      gas: 2000000,
+      gasPrice: gasPrice,
+      data: txData.input,
+    };
+    
+    const signedTx = await web3.eth.accounts.signTransaction(copiedTx, account.privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+    
+    bot.telegram.sendMessage(userId, `✅ **Copied Trade Executed!** \nTransaction: [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
+  } catch (error) {
+    console.error("Error executing copied trade:", error);
+    bot.telegram.sendMessage(userId, "❌ Failed to execute copied trade.");
+  }
+}
+
+// Start tracking trades
+trackCopiedTrades();
+
 // Launch bot
 bot.launch();
 console.log("Bot is running...");
