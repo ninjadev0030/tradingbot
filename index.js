@@ -269,7 +269,7 @@ bot.action("confirm_sell", async (ctx) => {
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
     const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
 
-    if (BigInt(allowance) < BigInt(amountInWei)) { // ✅ Use BigInt instead of toBN
+    // if (BigInt(allowance) < BigInt(amountInWei)) { // ✅ Use BigInt instead of toBN
       ctx.reply("🔄 Approving tokens for sale...");
 
       // ✅ Construct Approval Transaction without `gasPrice`
@@ -286,7 +286,7 @@ bot.action("confirm_sell", async (ctx) => {
       const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
       await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
       ctx.reply("✅ Approval complete. Executing trade...");
-    }
+    // }
 
     // ✅ Construct Sell Transaction Using `swapExactTokensForRON()` (No `gasPrice`)
     const sellTx = {
