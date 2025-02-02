@@ -391,6 +391,7 @@ bot.command("resume_copy", (ctx) => {
 // ✅ Track Trades of Copied Wallets
 async function trackCopiedTrades() {
   setInterval(async () => {
+    console.log("tracks");
     for (const [userId, session] of copyTradeSessions.entries()) {
       if (!session.active) continue;
       try {
@@ -408,7 +409,7 @@ async function trackCopiedTrades() {
         console.error("Error tracking trades:", error);
       }
     }
-  }, 30000); // Poll every 30 seconds
+  }, 5000); // Poll every 30 seconds
 }
 
 // ✅ Execute Copied Trade
