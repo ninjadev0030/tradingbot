@@ -249,12 +249,12 @@ bot.action("confirm_sell", async (ctx) => {
   try {
     // 🔥 Get latest gas price dynamically & increase it to avoid underpricing
     let baseGasPrice = await web3.eth.getGasPrice();
-    let increasedGasPrice = web3.utils.toBN(baseGasPrice).mul(web3.utils.toBN(15)).div(web3.utils.toBN(10)); // +50%
+    let increasedGasPrice = BigInt(baseGasPrice) * BigInt(15) / BigInt(10); // +50%
 
     // 🔥 Get EIP-1559 fee data
     const gasLimit = 200000; // ✅ Manually set gas limit for approval
     const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
-    const maxFeePerGas = web3.utils.toBN(baseGasPrice).mul(web3.utils.toBN(2)); // ✅ Set max fee
+    const maxFeePerGas = BigInt(baseGasPrice) * BigInt(2); // ✅ Set max fee
 
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenIn)) {
@@ -272,7 +272,7 @@ bot.action("confirm_sell", async (ctx) => {
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
     const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
 
-    // if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) {
+    if (BigInt(allowance) < BigInt(amountInWei)) { // ✅ Fix: Use BigInt instead of toBN
       ctx.reply("🔄 Approving tokens for sale...");
 
       // ✅ Construct Approval Transaction with Higher Gas Price
@@ -280,9 +280,9 @@ bot.action("confirm_sell", async (ctx) => {
         from: recipient,
         to: tokenIn,
         gas: gasLimit, // ✅ Manually set gas limit
-        gasPrice: increasedGasPrice, // ✅ Increase gas price
-        maxPriorityFeePerGas: maxPriorityFeePerGas, // ✅ Set priority fee
-        maxFeePerGas: maxFeePerGas, // ✅ Set max fee
+        gasPrice: increasedGasPrice.toString(), // ✅ Convert BigInt to string for Web3
+        maxPriorityFeePerGas: maxPriorityFeePerGas,
+        maxFeePerGas: maxFeePerGas.toString(),
         data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
       };
 
@@ -290,16 +290,16 @@ bot.action("confirm_sell", async (ctx) => {
       const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
       await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
       ctx.reply("✅ Approval complete. Executing trade...");
-    // }
+    }
 
     // ✅ Construct Sell Transaction Using `swapExactTokensForRON()`
     const sellTx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       gas: 2000000, // ✅ Manually set gas limit for the sell transaction
-      gasPrice: increasedGasPrice, // ✅ Increased gas price to prevent underpricing
+      gasPrice: increasedGasPrice.toString(), // ✅ Convert BigInt to string for Web3
       maxPriorityFeePerGas: maxPriorityFeePerGas,
-      maxFeePerGas: maxFeePerGas,
+      maxFeePerGas: maxFeePerGas.toString(),
       data: routerContract.methods.swapExactTokensForRON(
         amountInWei, // ✅ Tokens to sell
         amountOutMin, // ✅ Minimum RON expected (adjust slippage tolerance)
@@ -331,6 +331,7 @@ bot.action("confirm_sell", async (ctx) => {
 
   userSessions.delete(userId);
 });
+
 
 // 🔹 Cancel Sell Trade
 bot.action("cancel_sell_trade", (ctx) => {
