@@ -275,6 +275,7 @@ bot.action("confirm_sell", async (ctx) => {
         from: recipient,
         to: tokenIn,
         gas: 100000,
+        gasPrice: baseGasPrice,
         maxPriorityFeePerGas: maxPriorityFeePerGas,
         maxFeePerGas: maxFeePerGas,
         data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
