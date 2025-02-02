@@ -128,28 +128,32 @@ bot.action("confirm_buy", async (ctx) => {
   const tokenOut = session.tokenOut;
   const amountInWei = web3.utils.toWei(session.amountInRON, "ether");
 
-  ctx.reply(`🔄 Swapping **${session.amountInRON} RON** for tokens on Katana...`);
+  ctx.reply(`🔄 Swapping **${session.amountInRON} RON** for tokens on Katana v3...`);
 
   try {
     // 🔥 Get current gas price dynamically
     const gasPrice = await web3.eth.getGasPrice();
 
+    // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenOut)) {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
     }
 
+    // 🔥 Encode Swap Command for Katana v3
+    const command = "0x02"; // Swap Command for Katana v3
+    const inputData = web3.eth.abi.encodeParameters(
+      ["address", "address", "uint256", "uint256"],
+      ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut, amountInWei, "1"]
+    );
+
+    // ✅ Construct Transaction
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       value: amountInWei,
-      gas: 2000000,  // ✅ Ensure gas is defined
-      gasPrice: gasPrice, // ✅ Use the latest gas price
-      data: routerContract.methods.swapExactETHForTokens(
-        0,
-        ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
-        recipient,
-        Math.floor(Date.now() / 1000) + 60 * 10
-      ).encodeABI()
+      gas: 2000000,
+      gasPrice: gasPrice,
+      data: routerContract.methods.execute(command, [inputData], Math.floor(Date.now() / 1000) + 60 * 10).encodeABI()
     };
 
     const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
@@ -157,20 +161,26 @@ bot.action("confirm_buy", async (ctx) => {
 
     ctx.reply(`✅ Swap successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
 
-    // 🔥 Fetch and display the updated balance
+    // ✅ Fetch and display updated token balance
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenOut);
     const newBalance = await tokenContract.methods.balanceOf(recipient).call();
     const decimals = await tokenContract.methods.decimals().call();
     const formattedBalance = web3.utils.fromWei(newBalance, "ether");
 
-    ctx.reply(`📈 New token balance: **${formattedBalance}** tokens`);
+    ctx.reply(`📈 **New token balance:** ${formattedBalance} tokens`);
   } catch (error) {
-    console.error(error);
-    ctx.reply("❌ Swap failed. Please try again.");
+    console.error("🔴 Swap failed with error:", error);
+
+    if (error.reason) {
+      ctx.reply(`❌ Transaction failed: ${error.reason}`);
+    } else {
+      ctx.reply("❌ Swap failed due to a smart contract error. Please try again.");
+    }
   }
 
   userSessions.delete(userId);
 });
+
 
 
 // 🔹 Cancel Trade
