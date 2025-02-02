@@ -138,40 +138,19 @@ bot.action("confirm_buy", async (ctx) => {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
     }
 
-    // 🔥 Set correct swap path (RON → WETH → Token)
-    const WETH_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4";
-    const path = [WETH_ADDRESS, tokenOut];
-
-    // 🔥 Get estimated token amount to set a reasonable `amountOutMin`
-    const estimatedAmountOut = await routerContract.methods.getAmountsOut(amountInWei, path).call();
-    const amountOutMin = web3.utils.toBN(estimatedAmountOut[1]).mul(web3.utils.toBN(95)).div(web3.utils.toBN(100)); // 5% Slippage
-
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       value: amountInWei,
-      gas: 2000000,
-      gasPrice: gasPrice,
+      gas: 2000000,  // ✅ Ensure gas is defined
+      gasPrice: gasPrice, // ✅ Use the latest gas price
       data: routerContract.methods.swapExactETHForTokens(
-        amountOutMin.toString(), // ✅ Set a minimum expected output to avoid failed swaps
-        path,
+        0,
+        ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
         recipient,
         Math.floor(Date.now() / 1000) + 60 * 10
       ).encodeABI()
     };
-    // const tx = {
-    //   from: recipient,
-    //   to: KATANA_ROUTER_ADDRESS,
-    //   value: amountInWei,
-    //   gas: 2000000,  // ✅ Ensure gas is defined
-    //   gasPrice: gasPrice, // ✅ Use the latest gas price
-    //   data: routerContract.methods.swapExactETHForTokens(
-    //     0,
-    //     ["0xe514d9deb7966c8be0ca922de8a064264ea6bcd4", tokenOut], // RON → User specified token
-    //     recipient,
-    //     Math.floor(Date.now() / 1000) + 60 * 10
-    //   ).encodeABI()
-    // };
 
     const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
