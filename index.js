@@ -384,9 +384,9 @@ bot.command("resume_copy", (ctx) => {
 // ✅ Track Trades of Copied Wallets
 async function trackCopiedTrades() {
   setInterval(async () => {
-    console.log("tracks");
     for (const [userId, session] of copyTradeSessions.entries()) {
       if (!session.active) continue;
+      console.log("tracks");  
       try {
         const latestTxs = await web3.eth.getPastLogs({
           address: session.walletAddress,
