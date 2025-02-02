@@ -146,7 +146,7 @@ bot.action("confirm_buy", async (ctx) => {
     const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust this value to avoid failures
 
     // ✅ Encode the swap command for Katana v3
-    const command = web3.utils.utf8ToHex("swap"); // Swap command for Katana v3
+    const command = "0x02";
     const inputData = web3.eth.abi.encodeParameters(
       ["address", "address", "uint256", "uint256"],
       [WETH_ADDRESS, tokenOut, amountInWei, amountOutMin]
