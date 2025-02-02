@@ -202,6 +202,152 @@ function confirmTrade(ctx, session) {
   );
 }
 
+/********* Sell Part ***********/
+// 🔹 Sell Flow: First Ask for Token Address
+bot.action("sell", (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+
+  if (!session || session.step !== "connected") {
+    return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
+  }
+
+  ctx.reply("🔸 Enter the **Token Address** you want to sell.");
+  userSessions.set(userId, { step: "awaiting_token_to_sell", account: session.account });
+});
+
+// 🔹 Handle Token Address Input
+bot.on("text", async (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+
+  if (session) {
+    if (session.step === "awaiting_token_to_sell") {
+      session.tokenIn = ctx.message.text.trim();
+      if (!web3.utils.isAddress(session.tokenIn)) {
+        return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
+      }
+      session.step = "awaiting_sell_amount";
+
+      // Ask for Sell Amount
+      ctx.reply("✅ Token address saved!\nNow, enter the **amount of tokens** you want to sell.");
+    } else if (session.step === "awaiting_sell_amount") {
+      const amountInToken = ctx.message.text.trim();
+      if (isNaN(amountInToken) || parseFloat(amountInToken) <= 0) {
+        return ctx.reply("❌ Invalid amount. Please enter a valid number.");
+      }
+      session.amountInToken = amountInToken;
+      session.step = "confirming_sell_trade";
+      confirmSellTrade(ctx, session);
+    }
+  }
+});
+
+// 🔹 Confirm and Execute Sell
+bot.action("confirm_sell", async (ctx) => {
+  const userId = ctx.from.id;
+  const session = userSessions.get(userId);
+
+  if (!session || session.step !== "confirming_sell_trade") {
+    return ctx.reply("⚠ Trade session expired. Please restart by clicking 'Sell'.");
+  }
+
+  const account = session.account;
+  const recipient = account.address;
+  const tokenIn = session.tokenIn;
+  const amountInWei = web3.utils.toWei(session.amountInToken, "ether");
+
+  ctx.reply(`🔄 Selling **${session.amountInToken}** tokens for RON on Katana...`);
+
+  try {
+    // 🔥 Get current gas price dynamically
+    const gasPrice = await web3.eth.getGasPrice();
+
+    // 🔥 Ensure the token address is valid
+    if (!web3.utils.isAddress(tokenIn)) {
+      return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
+    }
+
+    // 🔥 Define Swap Path (Token → RON)
+    const WRON_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
+    const path = [tokenIn, WRON_ADDRESS];
+
+    // ✅ Set Minimum Output (`amountOutMin`) for Slippage Protection
+    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
+
+    // ✅ Approve Katana Router to Spend User's Tokens
+    const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
+    const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
+
+    if (web3.utils.toBN(allowance).lt(web3.utils.toBN(amountInWei))) {
+      ctx.reply("🔄 Approving tokens for sale...");
+      const approveTx = {
+        from: recipient,
+        to: tokenIn,
+        gas: 100000,
+        data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
+      };
+      const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
+      await web3.eth.sendSignedTransaction(signedApproveTx.rawTransaction);
+      ctx.reply("✅ Approval complete. Executing trade...");
+    }
+
+    // ✅ Construct Transaction Using `swapExactTokensForRON()`
+    const tx = {
+      from: recipient,
+      to: KATANA_ROUTER_ADDRESS,
+      gas: 2000000,
+      gasPrice: gasPrice,
+      data: routerContract.methods.swapExactTokensForRON(
+        amountInWei, // ✅ Tokens to sell
+        amountOutMin, // ✅ Minimum RON expected (adjust slippage tolerance)
+        path,
+        recipient,
+        Math.floor(Date.now() / 1000) + 60 * 10 // ✅ 10-minute deadline
+      ).encodeABI(),
+    };
+
+    const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
+    const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+    ctx.reply(`✅ Sell successful!\n🔹 **Transaction Hash:** [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
+
+    // ✅ Fetch and Display Updated RON Balance
+    const newRonBalance = await web3.eth.getBalance(recipient);
+    const formattedRonBalance = web3.utils.fromWei(newRonBalance, "ether");
+
+    ctx.reply(`📈 **New RON balance:** ${formattedRonBalance} RON`);
+  } catch (error) {
+    console.error("🔴 Sell failed with error:", error);
+
+    if (error.reason) {
+      ctx.reply(`❌ Transaction failed: ${error.reason}`);
+    } else {
+      ctx.reply("❌ Sell failed due to a smart contract error. Please try again.");
+    }
+  }
+
+  userSessions.delete(userId);
+});
+
+// 🔹 Cancel Sell Trade
+bot.action("cancel_sell_trade", (ctx) => {
+  const userId = ctx.from.id;
+  userSessions.delete(userId);
+  ctx.reply("❌ Sell trade canceled.");
+});
+
+// 🔹 Confirm Sell Trade Function
+function confirmSellTrade(ctx, session) {
+  ctx.reply(
+    `✅ You are about to swap **${session.amountInToken} tokens** for RON at **${session.tokenIn}**.\n\nClick **Confirm** to proceed.`,
+    Markup.inlineKeyboard([
+      [Markup.button.callback("✅ Confirm Trade", "confirm_sell")],
+      [Markup.button.callback("❌ Cancel", "cancel_sell_trade")]
+    ])
+  );
+}
+
 // Copy Trade Feature
 bot.action("copy_trade", (ctx) => ctx.reply("Copy trading activated!"));
 
