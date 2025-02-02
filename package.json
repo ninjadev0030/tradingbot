@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/ninjadev0030/ronin_trading_bot#readme",
   "dependencies": {
+    "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "ethers": "^5.7.2",
     "express": "^4.21.2",

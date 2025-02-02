@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { Telegraf, Markup } = require("telegraf");
 const { Web3 } = require("web3");
+const axios = require('axios');
 const fs = require("fs");
 
 const KATANA_ROUTER_ABI = JSON.parse(fs.readFileSync("./katanaRouterABI.json", "utf8"));
@@ -384,23 +385,34 @@ bot.command("resume_copy", (ctx) => {
 // ✅ Track Trades of Copied Wallets
 async function trackCopiedTrades() {
   setInterval(async () => {
+    const networkTimestamp = latestBlock.timestamp;
+    const latestBlock = await web3.eth.getBlock("latest");
+    
     for (const [userId, session] of copyTradeSessions.entries()) {
       if (!session.active) continue;
-      console.log(session.walletAddress);  
       try {
-        const latestBlock = await web3.eth.getBlockNumber();
-        const latestTxs = await web3.eth.getPastLogs({
-          address: session.walletAddress,
-          fromBlock: latestBlock,
-          toBlock: latestBlock,
-        });
-        console.log(latestTxs.length);
-        for (const tx of latestTxs) {
-          if (tx.topics.length > 0) {
-            bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${tx.transactionHash})`);
-            executeCopyTrade(userId, session.walletAddress, tx);
+        let config = {
+          method: 'get',
+          maxBodyLength: Infinity,
+          url: 'https://api-gateway.skymavis.com/skynet/ronin/web3/v2/accounts/'+'0x23e6dB0a0c928D5E36CdC12a7732610B394BD2C3'+'/txs',
+          headers: { 
+            'Accept': 'application/json', 
+            'X-API-KEY': 'H0ec1VBHSyEznM0Myjdoug6hDu37ygh6'
           }
-        }
+        };
+        
+        axios.request(config)
+        .then((response) => {
+          var tmp = response.data.result.items;
+          var lastItem = tmp[0];
+          if(networkTimestamp - lastItem.blockTime < 5) {
+            bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${tx.transactionHash})`);
+            executeCopyTrade(userId, session.walletAddress, lastItem);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
       } catch (error) {
         console.error("Error tracking trades:", error);
       }
@@ -442,6 +454,7 @@ trackCopiedTrades();
 // Launch bot
 bot.launch();
 console.log("Bot is running...");
+
 
 // Graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
