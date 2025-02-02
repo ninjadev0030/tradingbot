@@ -276,7 +276,7 @@ bot.action("confirm_sell", async (ctx) => {
       const approveTx = {
         from: recipient,
         to: tokenIn,
-        gas: gasLimit, // ✅ Manually set gas limit
+        gas: 200000, // ✅ Manually set gas limit
         maxPriorityFeePerGas: maxPriorityFeePerGas,
         maxFeePerGas: maxFeePerGas,
         data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
