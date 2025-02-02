@@ -372,12 +372,16 @@ bot.action("start_copy_trade", (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
   
-  if (!session || session.step !== "connected") {
+  if (!session || !session.account) {
     return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
   }
+
+  // ctx.reply("🔹 Enter the **Token Address** you want to buy.");
+  // userSessions.set(userId, { step: "awaiting_token_address", account: session.account });
+  session.step = "awaiting_copy_wallet";  // ✅ Retain account, only update step
+  userSessions.set(userId, session);
   
   ctx.reply("Please enter the wallet address you want to copy trades from.");
-  userSessions.set(ctx.from.id, { step: "awaiting_copy_wallet" });
 });
 
 // ✅ Pause Copy Trading
