@@ -67,6 +67,21 @@ bot.on("text", async (ctx) => {
       session.amountInRON = amountInRON;
       session.step = "confirming_trade";
       confirmTrade(ctx, session);
+    } if (session.step === "awaiting_token_to_sell") {
+      session.tokenIn = ctx.message.text.trim();
+      if (!web3.utils.isAddress(session.tokenIn)) {
+        return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
+      }
+      session.step = "awaiting_sell_amount";
+      ctx.reply("✅ Token address saved!\nNow, enter the **amount of tokens** you want to sell.");
+    } else if (session.step === "awaiting_sell_amount") {
+      const amountInToken = ctx.message.text.trim();
+      if (isNaN(amountInToken) || parseFloat(amountInToken) <= 0) {
+        return ctx.reply("❌ Invalid amount. Please enter a valid number.");
+      }
+      session.amountInToken = amountInToken;
+      session.step = "confirming_sell_trade";
+      confirmSellTrade(ctx, session);
     }
   }
 });
@@ -214,31 +229,6 @@ bot.action("sell", (ctx) => {
 
   ctx.reply("🔸 Enter the **Token Address** you want to sell.");
   userSessions.set(userId, { step: "awaiting_token_to_sell", account: session.account });
-});
-
-// 🔹 Handle Token Address & Ask for Amount
-bot.on("text", async (ctx) => {
-  const userId = ctx.from.id;
-  const session = userSessions.get(userId);
-
-  if (session) {
-    if (session.step === "awaiting_token_to_sell") {
-      session.tokenIn = ctx.message.text.trim();
-      if (!web3.utils.isAddress(session.tokenIn)) {
-        return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
-      }
-      session.step = "awaiting_sell_amount";
-      ctx.reply("✅ Token address saved!\nNow, enter the **amount of tokens** you want to sell.");
-    } else if (session.step === "awaiting_sell_amount") {
-      const amountInToken = ctx.message.text.trim();
-      if (isNaN(amountInToken) || parseFloat(amountInToken) <= 0) {
-        return ctx.reply("❌ Invalid amount. Please enter a valid number.");
-      }
-      session.amountInToken = amountInToken;
-      session.step = "confirming_sell_trade";
-      confirmSellTrade(ctx, session);
-    }
-  }
 });
 
 // 🔹 Confirm and Execute Sell
