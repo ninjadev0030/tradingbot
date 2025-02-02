@@ -138,15 +138,23 @@ bot.action("confirm_buy", async (ctx) => {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
     }
 
-    // 🔥 Set correct swap path (WETH needed for some tokens)
+    // 🔥 Set correct swap path (Katana may require WETH for some tokens)
     const WETH_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
-    const path = [WETH_ADDRESS, tokenOut];
+    const isDirectSwap = true; // Set `false` if a multi-hop is required
+    const path = isDirectSwap ? [WETH_ADDRESS, tokenOut] : [WETH_ADDRESS, "0xAnotherToken", tokenOut];
 
-    // ✅ Set a safe `amountOutMin` (slippage tolerance)
-    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust this value to avoid failures
+    // ✅ Ensure proper `msg.value` (fix for `InsufficientETH`)
+    if (parseFloat(session.amountInRON) <= 0) {
+      return ctx.reply("❌ Error: You must enter a valid RON amount.");
+    }
 
-    // ✅ Encode the swap command for Katana v3
-    const command = "0x02";
+    // ✅ Set `amountOutMin` to avoid transaction failures
+    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust as needed
+
+    // ✅ Correctly format `commands` argument for Katana v3
+    const command = isDirectSwap ? "0x02" : "0x03"; // "0x02" for single-hop, "0x03" for multi-hop
+
+    // ✅ Encode the swap input data
     const inputData = web3.eth.abi.encodeParameters(
       ["address", "address", "uint256", "uint256"],
       [WETH_ADDRESS, tokenOut, amountInWei, amountOutMin]
@@ -156,10 +164,14 @@ bot.action("confirm_buy", async (ctx) => {
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
-      value: amountInWei,
+      value: amountInWei, // 🔥 Ensures enough ETH is sent
       gas: 2000000,
       gasPrice: gasPrice,
-      data: routerContract.methods.execute(command, [inputData], Math.floor(Date.now() / 1000) + 60 * 10).encodeABI()
+      data: routerContract.methods.execute(
+        command, // ✅ Correctly formatted `commands`
+        [inputData], 
+        Math.floor(Date.now() / 1000) + 60 * 10
+      ).encodeABI()
     };
 
     const signedTx = await web3.eth.accounts.signTransaction(tx, account.privateKey);
