@@ -250,8 +250,9 @@ bot.action("confirm_sell", async (ctx) => {
     // 🔥 Get the latest gas fee details for EIP-1559 transactions
     const feeData = await web3.eth.getBlock("latest");
     const gasLimit = 2000000; // ✅ Manually set gas limit
-    const maxPriorityFeePerGas = web3.utils.toWei("10", "gwei"); // ✅ Suggested priority fee
-    const maxFeePerGas = web3.utils.toWei("20", "gwei"); // ✅ Set max fee
+    const baseFeePerGas = await web3.eth.getGasPrice();
+    const maxPriorityFeePerGas = web3.utils.toWei("10", "gwei"); // ✅ Higher priority fee
+    const maxFeePerGas = (BigInt(baseFeePerGas) * BigInt(3)).toString();
 
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenIn)) {
