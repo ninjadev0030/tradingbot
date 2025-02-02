@@ -231,8 +231,6 @@ bot.action("sell", (ctx) => {
   userSessions.set(userId, { step: "awaiting_token_to_sell", account: session.account });
 });
 
-// 🔹 Confirm and Execute Sell
-// 🔹 Confirm and Execute Sell
 bot.action("confirm_sell", async (ctx) => {
   const userId = ctx.from.id;
   const session = userSessions.get(userId);
@@ -249,8 +247,11 @@ bot.action("confirm_sell", async (ctx) => {
   ctx.reply(`🔄 Selling **${session.amountInToken}** tokens for RON on Katana...`);
 
   try {
-    // 🔥 Get current gas price dynamically
-    const gasPrice = await web3.eth.getGasPrice();
+    // 🔥 Get gas fees dynamically (EIP-1559 compatible)
+    const feeData = await web3.eth.getBlock("latest"); 
+    const gasLimit = 2000000; // ✅ Manually setting gas limit
+    const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
+    const maxFeePerGas = web3.utils.toWei("20", "gwei"); // ✅ Suggested max fee
 
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenIn)) {
@@ -268,12 +269,14 @@ bot.action("confirm_sell", async (ctx) => {
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
     const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
 
-    // if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) { // ✅ Fixed
+    // if (new web3.utils.BN(allowance).lt(new web3.utils.BN(amountInWei))) {
       ctx.reply("🔄 Approving tokens for sale...");
       const approveTx = {
         from: recipient,
         to: tokenIn,
         gas: 100000,
+        maxPriorityFeePerGas: maxPriorityFeePerGas,
+        maxFeePerGas: maxFeePerGas,
         data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
       };
       const signedApproveTx = await web3.eth.accounts.signTransaction(approveTx, account.privateKey);
@@ -285,8 +288,9 @@ bot.action("confirm_sell", async (ctx) => {
     const tx = {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
-      gas: 2000000,
-      gasPrice: gasPrice,
+      gas: gasLimit, // ✅ Set manual gas limit to prevent underestimation
+      maxPriorityFeePerGas: maxPriorityFeePerGas,
+      maxFeePerGas: maxFeePerGas,
       data: routerContract.methods.swapExactTokensForRON(
         amountInWei, // ✅ Tokens to sell
         amountOutMin, // ✅ Minimum RON expected (adjust slippage tolerance)
@@ -318,7 +322,6 @@ bot.action("confirm_sell", async (ctx) => {
 
   userSessions.delete(userId);
 });
-
 
 // 🔹 Cancel Sell Trade
 bot.action("cancel_sell_trade", (ctx) => {
