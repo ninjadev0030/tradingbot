@@ -9,7 +9,7 @@ const ERC20_ABI = JSON.parse(fs.readFileSync("./erc20ABI.json", "utf8"));
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const web3 = new Web3(new Web3.providers.HttpProvider("https://api.roninchain.com/rpc"));
 
-const KATANA_ROUTER_ADDRESS = "0xC873fEd316bE69b144Aab81177bd86E6a6cD555F";
+const KATANA_ROUTER_ADDRESS = "0x5f0acdd3ec767514ff1bf7e79949640bf94576bd";
 const routerContract = new web3.eth.Contract(KATANA_ROUTER_ABI, KATANA_ROUTER_ADDRESS);
 
 const userSessions = new Map(); // Store user wallet sessions
