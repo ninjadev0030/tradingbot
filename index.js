@@ -252,7 +252,7 @@ bot.action("confirm_sell", async (ctx) => {
     const gasLimit = 2000000; // ✅ Manually setting gas limit
     const maxPriorityFeePerGas = web3.utils.toWei("2", "gwei"); // ✅ Suggested priority fee
     const maxFeePerGas = web3.utils.toWei("20", "gwei"); // ✅ Suggested max fee
-
+    let baseGasPrice = await web3.eth.getGasPrice();
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenIn)) {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
@@ -289,6 +289,7 @@ bot.action("confirm_sell", async (ctx) => {
       from: recipient,
       to: KATANA_ROUTER_ADDRESS,
       gas: gasLimit, // ✅ Set manual gas limit to prevent underestimation
+      gasPrice: baseGasPrice,
       maxPriorityFeePerGas: maxPriorityFeePerGas,
       maxFeePerGas: maxFeePerGas,
       data: routerContract.methods.swapExactTokensForRON(
