@@ -159,7 +159,7 @@ bot.action("confirm_buy", async (ctx) => {
       ["address", "address", "uint256", "uint256"],
       [WETH_ADDRESS, tokenOut, amountInWei, amountOutMin]
     );
-
+    console.log(inputData)
     // ✅ Construct the transaction
     const tx = {
       from: recipient,
