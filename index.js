@@ -164,7 +164,7 @@ bot.action("confirm_buy", async (ctx) => {
   try {
     // 🔥 Get current gas price dynamically
     const gasPrice = await web3.eth.getGasPrice();
-    const gweiToWei = web3.utils.toWei("20", "gwei");
+
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenOut)) {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
@@ -181,7 +181,9 @@ bot.action("confirm_buy", async (ctx) => {
     const tx = {
       from: recipient,
       to: TAMA_ROUTER_ADDRESS,
-      gas: gweiToWei,
+      value: amountInWei, // 🔥 Ensures enough RON is sent
+      gas: 2000000,
+      gasPrice: gasPrice,
       data: routerContract.methods.buyTokensWithETH(
         tokenOut,
         amountInWei,
