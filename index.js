@@ -353,7 +353,7 @@ bot.action("confirm_sell", async (ctx) => {
       maxFeePerGas: maxFeePerGas,
       maxPriorityFeePerGas: maxPriorityFeePerGas,
       data: routerContract.methods.sellTokensForETH(
-        tokenOut,
+        tokenIn,
         amountInWei,
         amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
         RON_ADDRESS,
