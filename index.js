@@ -433,6 +433,11 @@ bot.action("start_copy_trade", (ctx) => {
 
 // ✅ Set Copy Trading Limit using buttons
 bot.command("set_limit", (ctx) => {
+  const userId = ctx.from.id;
+  let session = copyTradeSessions.get(userId) || {};
+  session.step = "awaiting_limit_selection";
+  copyTradeSessions.set(userId, session);
+  
   ctx.reply("Select a limit or set a custom value:", Markup.inlineKeyboard([
     [Markup.button.callback("50 RON", "set_limit_50"), Markup.button.callback("100 RON", "set_limit_100")],
     [Markup.button.callback("200 RON", "set_limit_200"), Markup.button.callback("500 RON", "set_limit_500")],
