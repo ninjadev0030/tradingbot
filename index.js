@@ -551,7 +551,7 @@ async function trackCopiedTrades() {
 // ✅ Execute Copied Trade
 async function executeCopyTrade(userId, walletAddress, tx) {
   try {
-    const session = userSessions.get(userId);
+    const session = copyTradeSessions.get(userId);
     if (!session) return bot.telegram.sendMessage(userId, "⚠ Please connect your wallet to copy trades.");
     
     const { account, limit, gasPrice, slippage } = session;
