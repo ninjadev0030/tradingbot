@@ -204,7 +204,7 @@ bot.action("confirm_buy", async (ctx) => {
         tokenOut,
         amountInWei,
         amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
-        RON_ADDRESS,
+        recipient,
         Math.floor(Date.now() / 1000) + 60 * 10,
         "0x"
       ).encodeABI()
