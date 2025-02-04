@@ -19,6 +19,8 @@ const routerContract = new web3.eth.Contract(TAMA_ROUTER_ABI, TAMA_ROUTER_ADDRES
 const userSessions = new Map(); // Store user wallet sessions
 const copyTradeSessions = new Map(); // Store copy trade sessions
 
+const DEFAULT_LIMITS = [50, 100, 200, 500];
+
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
   [Markup.button.callback("🔹 Buy", "buy"), Markup.button.callback("🔸 Sell", "sell")],
@@ -407,24 +409,68 @@ function confirmSellTrade(ctx, session) {
 // ✅ Copy Trade Setup from Button
 bot.action("start_copy_trade", (ctx) => {
   const userId = ctx.from.id;
-  const session = userSessions.get(userId);
-  
-  if (!session || !session.account) {
+  const session = userSessions.get(userId) || {};
+
+  if (!session.account) {
     return ctx.reply("⚠ Please **connect your wallet** first using 'Connect Wallet'.");
   }
 
-  // ctx.reply("🔹 Enter the **Token Address** you want to buy.");
-  // userSessions.set(userId, { step: "awaiting_token_address", account: session.account });
-  session.step = "awaiting_copy_wallet";  // ✅ Retain account, only update step
+  session.step = "awaiting_copy_wallet";
   userSessions.set(userId, session);
+
+  ctx.reply("🔹 Please enter the wallet address you want to copy trades from.");
+});
+
+// ✅ Set Copy Trading Limit using buttons
+bot.command("set_limit", (ctx) => {
+  ctx.reply("Select a limit or set a custom value:", Markup.inlineKeyboard([
+    [Markup.button.callback("50 RON", "set_limit_50"), Markup.button.callback("100 RON", "set_limit_100")],
+    [Markup.button.callback("200 RON", "set_limit_200"), Markup.button.callback("500 RON", "set_limit_500")],
+    [Markup.button.callback("Set Custom Value", "set_custom_limit")]
+  ]));
+});
+
+// ✅ Handle Default Limit Selection
+DEFAULT_LIMITS.forEach(limit => {
+  bot.action(`set_limit_${limit}`, (ctx) => {
+    const userId = ctx.from.id;
+    let session = copyTradeSessions.get(userId) || {};
+    session.limit = limit;
+    copyTradeSessions.set(userId, session);
+    ctx.reply(`✅ Trade limit set to ${limit} RON.`);
+  });
+});
+
+// ✅ Handle Custom Limit Input
+bot.action("set_custom_limit", (ctx) => {
+  const userId = ctx.from.id;
+  let session = copyTradeSessions.get(userId) || {};
+  session.step = "awaiting_custom_limit";
+  copyTradeSessions.set(userId, session);
+  ctx.reply("✏ Please enter your custom trade limit in RON:");
+});
+
+bot.on("text", (ctx) => {
+  const userId = ctx.from.id;
+  let session = copyTradeSessions.get(userId);
   
-  ctx.reply("Please enter the wallet address you want to copy trades from.");
+  if (session && session.step === "awaiting_custom_limit") {
+    const customLimit = parseFloat(ctx.message.text);
+    if (isNaN(customLimit) || customLimit <= 0) {
+      return ctx.reply("⚠ Invalid custom limit. Please enter a valid number.");
+    }
+    session.limit = customLimit;
+    session.step = null;
+    copyTradeSessions.set(userId, session);
+    ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
+  }
 });
 
 // ✅ Pause Copy Trading
 bot.command("pause_copy", (ctx) => {
-  if (copyTradeSessions.has(ctx.from.id)) {
-    copyTradeSessions.get(ctx.from.id).active = false;
+  const userId = ctx.from.id;
+  if (copyTradeSessions.has(userId)) {
+    copyTradeSessions.get(userId).active = false;
     ctx.reply("⏸ Copy trading paused.");
   } else {
     ctx.reply("❌ No active copy trade found.");
@@ -433,8 +479,9 @@ bot.command("pause_copy", (ctx) => {
 
 // ✅ Resume Copy Trading
 bot.command("resume_copy", (ctx) => {
-  if (copyTradeSessions.has(ctx.from.id)) {
-    copyTradeSessions.get(ctx.from.id).active = true;
+  const userId = ctx.from.id;
+  if (copyTradeSessions.has(userId)) {
+    copyTradeSessions.get(userId).active = true;
     ctx.reply("▶ Copy trading resumed.");
   } else {
     ctx.reply("❌ No active copy trade found.");
@@ -463,7 +510,8 @@ async function trackCopiedTrades() {
         .then((response) => {
           var tmp = response.data.result.items;
           var lastItem = tmp[0];
-          if(Number(networkTimestamp) - lastItem.blockTime < 5) {
+          const methodId = inputData.slice(0, 10);
+          if(Number(networkTimestamp) - lastItem.blockTime < 5 && methodId == "0xa91c6df4") {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${lastItem.transactionHash})`);
             executeCopyTrade(userId, session.walletAddress, lastItem);
           }
@@ -482,20 +530,36 @@ async function trackCopiedTrades() {
 async function executeCopyTrade(userId, walletAddress, tx) {
   try {
     const session = userSessions.get(userId);
-    console.log(session);
     if (!session) return bot.telegram.sendMessage(userId, "⚠ Please connect your wallet to copy trades.");
     
-    const { account } = session;
+    const { account, limit } = session;
     const gasPrice = await web3.eth.getGasPrice();
     const txData = await web3.eth.getTransaction(tx.transactionHash);
+    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
+    const decoded = ethers.utils.defaultAbiCoder.decode(
+      ["address", "uint256", "uint256", "address", "uint256", "bytes"],
+        "0x" + tx.input.slice(10)
+    );
+  
+    let tradeAmount = web3.utils.fromWei(txData.value, "ether");
+    if (tradeAmount > limit) {
+      tradeAmount = limit;
+    }
     
     const copiedTx = {
       from: account.address,
-      to: txData.to,
-      value: txData.value,
+      to: TAMA_ROUTER_ADDRESS,
+      value: web3.utils.toWei(tradeAmount.toString(), "ether"), // ✅ Apply limit
       gas: 2000000,
       gasPrice: gasPrice,
-      data: txData.input,
+      data: routerContract.methods.buyTokensWithETH(
+        decoded[0],
+        web3.utils.toWei(tradeAmount.toString(), "ether"),
+        amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
+        account.address,
+        Math.floor(Date.now() / 1000) + 60 * 10,
+        "0x"
+      ).encodeABI()
     };
     
     const signedTx = await web3.eth.accounts.signTransaction(copiedTx, account.privateKey);
@@ -507,6 +571,7 @@ async function executeCopyTrade(userId, walletAddress, tx) {
     bot.telegram.sendMessage(userId, "❌ Failed to execute copied trade.");
   }
 }
+
 
 // Pause Copy Trading
 bot.action("pause_copy_trade", (ctx) => {
