@@ -528,6 +528,7 @@ async function trackCopiedTrades() {
         .then((response) => {
           var tmp = response.data.result.items;
           var lastItem = tmp[tmp.length - 1];
+          console.log(lastItem);
           const methodId = lastItem.input.slice(0, 10);
           console.log(methodId);
           console.log("difference time: " + (Number(networkTimestamp) - lastItem.blockTime) + "s");
