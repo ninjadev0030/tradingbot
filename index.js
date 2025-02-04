@@ -99,7 +99,17 @@ bot.on("text", async (ctx) => {
       }
       copyTradeSessions.set(userId, { walletAddress, active: true });
       ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
+      ctx.reply("🔹 Now, please set a trade limit using the /set_limit command.");
       // userSessions.delete(userId);
+    } else if (session && session.step === "awaiting_custom_limit") {
+      const customLimit = parseFloat(ctx.message.text);
+      if (isNaN(customLimit) || customLimit <= 0) {
+        return ctx.reply("⚠ Invalid custom limit. Please enter a valid number.");
+      }
+      session.limit = customLimit;
+      session.step = null;
+      copyTradeSessions.set(userId, session);
+      ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
     }
   }
 });
@@ -450,21 +460,6 @@ bot.action("set_custom_limit", (ctx) => {
   ctx.reply("✏ Please enter your custom trade limit in RON:");
 });
 
-bot.on("text", (ctx) => {
-  const userId = ctx.from.id;
-  let session = copyTradeSessions.get(userId);
-  
-  if (session && session.step === "awaiting_custom_limit") {
-    const customLimit = parseFloat(ctx.message.text);
-    if (isNaN(customLimit) || customLimit <= 0) {
-      return ctx.reply("⚠ Invalid custom limit. Please enter a valid number.");
-    }
-    session.limit = customLimit;
-    session.step = null;
-    copyTradeSessions.set(userId, session);
-    ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
-  }
-});
 
 // ✅ Pause Copy Trading
 bot.command("pause_copy", (ctx) => {
