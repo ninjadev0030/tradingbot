@@ -20,6 +20,7 @@ const userSessions = new Map(); // Store user wallet sessions
 const copyTradeSessions = new Map(); // Store copy trade sessions
 
 const DEFAULT_LIMITS = [50, 100, 200, 500];
+const DEFAULT_GAS_PRICES = ["Low", "Medium", "High"];
 
 // Main menu buttons
 const mainMenu = Markup.inlineKeyboard([
@@ -113,11 +114,35 @@ bot.on("text", async (ctx) => {
         return ctx.reply("⚠ Invalid custom limit. Please enter a valid number.");
       }
       session.limit = customLimit;
-      session.step = null;
+      session.step = "awaiting_slippage";
       copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
+      ctx.reply("Select a gas fee preference:", Markup.inlineKeyboard([
+        [Markup.button.callback("Low", "set_gas_low"), Markup.button.callback("Medium", "set_gas_medium")],
+        [Markup.button.callback("High", "set_gas_high")]
+      ]));
+    } else if (session.step === "awaiting_slippage") {
+      const slippage = parseFloat(ctx.message.text);
+      if (isNaN(slippage) || slippage <= 0 || slippage > 100) {
+        return ctx.reply("⚠ Invalid slippage. Enter a value between 0.1 and 100.");
+      }
+      session.slippage = slippage / 100;
+      session.step = null;
+      copyTradeSessions.set(userId, session);
+      ctx.reply(`✅ Slippage tolerance set to ${slippage}%.`);
     }
   }
+});
+
+
+DEFAULT_GAS_PRICES.forEach(gas => {
+  bot.action(`set_gas_${gas.toLowerCase()}`, (ctx) => {
+    const userId = ctx.from.id;
+    let session = copyTradeSessions.get(userId) || {};
+    session.gasPrice = gas;
+    copyTradeSessions.set(userId, session);
+    ctx.reply(`✅ Gas price preference set to ${gas}.`);
+  });
 });
 
 // 🔹 Buy Flow: First Ask for Token Address
@@ -503,6 +528,7 @@ async function trackCopiedTrades() {
           var tmp = response.data.result.items;
           var lastItem = tmp[0];
           const methodId = inputData.slice(0, 10);
+          console.log(methodId);
           if(Number(networkTimestamp) - lastItem.blockTime < 5 && methodId == "0xa91c6df4") {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${lastItem.transactionHash})`);
             executeCopyTrade(userId, session.walletAddress, lastItem);
@@ -524,10 +550,13 @@ async function executeCopyTrade(userId, walletAddress, tx) {
     const session = userSessions.get(userId);
     if (!session) return bot.telegram.sendMessage(userId, "⚠ Please connect your wallet to copy trades.");
     
-    const { account, limit } = session;
-    const gasPrice = await web3.eth.getGasPrice();
+    const { account, limit, gasPrice, slippage } = session;
+    let gasPriceValue = await web3.eth.getGasPrice();
+    if (gasPrice === "Medium") gasPriceValue = BigInt(gasPriceValue) * 2n;
+    else if (gasPrice === "High") gasPriceValue = BigInt(gasPriceValue) * 3n;
+    
     const txData = await web3.eth.getTransaction(tx.transactionHash);
-    const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
+    const amountOutMin = web3.utils.toWei((0.0001 * (1 - slippage)).toString(), "ether"); // Adjust for slippage
     const decoded = ethers.utils.defaultAbiCoder.decode(
       ["address", "uint256", "uint256", "address", "uint256", "bytes"],
         "0x" + tx.input.slice(10)
@@ -543,11 +572,11 @@ async function executeCopyTrade(userId, walletAddress, tx) {
       to: TAMA_ROUTER_ADDRESS,
       value: web3.utils.toWei(tradeAmount.toString(), "ether"), // ✅ Apply limit
       gas: 2000000,
-      gasPrice: gasPrice,
+      gasPrice: gasPriceValue.toString(),
       data: routerContract.methods.buyTokensWithETH(
         decoded[0],
         web3.utils.toWei(tradeAmount.toString(), "ether"),
-        amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
+        amountOutMin, // ✅ Adjusted for slippage
         account.address,
         Math.floor(Date.now() / 1000) + 60 * 10,
         "0x"
