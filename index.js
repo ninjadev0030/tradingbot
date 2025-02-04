@@ -320,7 +320,8 @@ bot.action("confirm_sell", async (ctx) => {
         gas: 200000, // ✅ Manually set gas limit
         maxPriorityFeePerGas: maxPriorityFeePerGas,
         maxFeePerGas: maxFeePerGas,
-        data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
+        // data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
+        data: tokenContract.methods.approve(TAMA_ROUTER_ADDRESS, amountInWei).encodeABI(),
       };
 
       // ✅ Sign and Send Approval Transaction
