@@ -527,11 +527,9 @@ async function trackCopiedTrades() {
         axios.request(config)
         .then((response) => {
           var tmp = response.data.result.items;
-          var lastItem = tmp[tmp.length - 1];
-          console.log(lastItem);
+          var lastItem = tmp[0];
           const methodId = lastItem.input.slice(0, 10);
-          console.log(methodId);
-          console.log("difference time: " + (Number(networkTimestamp) - lastItem.blockTime) + "s");
+          console.log("check last time difference:" + (Number(networkTimestamp) - lastItem.blockTime));
           if(Number(networkTimestamp) - lastItem.blockTime < 5 && methodId == "0xa91c6df4") {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${lastItem.transactionHash})`);
             executeCopyTrade(userId, session.walletAddress, lastItem);
