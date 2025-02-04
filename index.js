@@ -11,6 +11,7 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const web3 = new Web3(new Web3.providers.HttpProvider("https://api.roninchain.com/rpc"));
 
 const TAMA_ROUTER_ADDRESS = "0xa54b0184d12349cf65281c6f965a74828ddd9e8f";
+console.log(TAMA_ROUTER_ABI);
 const routerContract = new web3.eth.Contract(TAMA_ROUTER_ABI, TAMA_ROUTER_ADDRESS);
 
 const userSessions = new Map(); // Store user wallet sessions
