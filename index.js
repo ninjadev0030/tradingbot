@@ -553,6 +553,7 @@ async function trackCopiedTrades() {
 async function executeCopyTrade(userId, walletAddress, tx) {
   try {
     const session = copyTradeSessions.get(userId);
+    const session1 = userSessions.get(userId);
     if (!session) return bot.telegram.sendMessage(userId, "⚠ Please connect your wallet to copy trades.");
     
     const { account, limit, gasPrice, slippage } = session;
@@ -566,7 +567,10 @@ async function executeCopyTrade(userId, walletAddress, tx) {
       ["address", "uint256", "uint256", "address", "uint256", "bytes"],
         "0x" + tx.input.slice(10)
     );
-    console.log(account);
+    console.log(session1.account.address);
+    console.log(session.limit);
+    console.log(session.gasPrice);
+    console.log(session.slippage);
     let tradeAmount = web3.utils.fromWei(txData.value, "ether");
     if (tradeAmount > limit) {
       tradeAmount = limit;
