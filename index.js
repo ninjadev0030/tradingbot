@@ -115,6 +115,7 @@ bot.on("text", async (ctx) => {
       }
       session.limit = customLimit;
       session.step = "awaiting_slippage";
+      session.active = true;
       copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
       ctx.reply("Select a gas fee preference:", Markup.inlineKeyboard([
