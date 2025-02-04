@@ -130,7 +130,7 @@ bot.on("text", async (ctx) => {
       session.step = null;
       copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Slippage tolerance set to ${slippage}%.`);
-    }
+    }1
   }
 });
 
@@ -142,6 +142,7 @@ DEFAULT_GAS_PRICES.forEach(gas => {
     session.gasPrice = gas;
     copyTradeSessions.set(userId, session);
     ctx.reply(`✅ Gas price preference set to ${gas}.`);
+    ctx.reply("🔹 Please enter the slippage value. 0-100");
   });
 });
 
@@ -529,6 +530,7 @@ async function trackCopiedTrades() {
           var lastItem = tmp[0];
           const methodId = inputData.slice(0, 10);
           console.log(methodId);
+          console.log("difference time: " + (Number(networkTimestamp) - lastItem.blockTime) + "s");
           if(Number(networkTimestamp) - lastItem.blockTime < 5 && methodId == "0xa91c6df4") {
             bot.telegram.sendMessage(userId, `📢 **Copy Trade Alert** \nTrade detected for wallet: \`${session.walletAddress}\`\nTX Hash: [View on Explorer](https://explorer.roninchain.com/tx/${lastItem.transactionHash})`);
             executeCopyTrade(userId, session.walletAddress, lastItem);
