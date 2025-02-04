@@ -128,11 +128,10 @@ bot.on("text", async (ctx) => {
       if (isNaN(slippage) || slippage <= 0 || slippage > 100) {
         return ctx.reply("⚠ Invalid slippage. Enter a value between 0.1 and 100.");
       }
-      session.slippage = slippage / 100;
-      session.step = "running_timer";
-      // session.active = true;
-      copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Slippage tolerance set to ${slippage}%.`);
+      session.slippage = slippage / 100;
+      session.step = null;
+      copyTradeSessions.set(userId, session);
     }1
   }
 });
