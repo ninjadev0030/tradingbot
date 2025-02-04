@@ -110,12 +110,12 @@ bot.on("text", async (ctx) => {
       // userSessions.delete(userId);
     } else if (session.step === "awaiting_custom_limit") {
       const customLimit = parseFloat(ctx.message.text);
+      let session = copyTradeSessions.get(userId) || {};
       if (isNaN(customLimit) || customLimit <= 0) {
         return ctx.reply("⚠ Invalid custom limit. Please enter a valid number.");
       }
       session.limit = customLimit;
       session.step = "awaiting_slippage";
-      session.active = true;
       copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
       ctx.reply("Select a gas fee preference:", Markup.inlineKeyboard([
@@ -124,6 +124,7 @@ bot.on("text", async (ctx) => {
       ]));
     } else if (session.step === "awaiting_slippage") {
       const slippage = parseFloat(ctx.message.text);
+      let session = copyTradeSessions.get(userId) || {};
       if (isNaN(slippage) || slippage <= 0 || slippage > 100) {
         return ctx.reply("⚠ Invalid slippage. Enter a value between 0.1 and 100.");
       }
