@@ -348,7 +348,7 @@ bot.action("confirm_sell", async (ctx) => {
     const sellTx = {
       from: recipient,
       to: TAMA_ROUTER_ADDRESS,
-      value: amountInWei, // 🔥 Ensures enough RON is sent
+      value: 0,
       gas: gasLimit,
       maxFeePerGas: maxFeePerGas,
       maxPriorityFeePerGas: maxPriorityFeePerGas,
