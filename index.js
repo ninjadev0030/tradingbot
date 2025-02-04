@@ -164,15 +164,15 @@ bot.action("confirm_buy", async (ctx) => {
   try {
     // 🔥 Get current gas price dynamically
     const gasPrice = await web3.eth.getGasPrice();
-
+    const gweiToWei = web3.utils.toWei("20", "gwei");
     // 🔥 Ensure the token address is valid
     if (!web3.utils.isAddress(tokenOut)) {
       return ctx.reply("❌ Invalid token address. Please enter a correct Ethereum/Ronin address.");
     }
 
     // 🔥 Define Swap Path (RON → Token)
-    const WRON_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
-    const path = [WRON_ADDRESS, tokenOut];
+    const RON_ADDRESS = "0x23e6dB0a0c928D5E36CdC12a7732610B394BD2C3"; // Wrapped RON
+    const path = [RON_ADDRESS, tokenOut];
 
     // ✅ Set Minimum Output (`amountOutMin`) for Slippage Protection
     const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
@@ -181,14 +181,12 @@ bot.action("confirm_buy", async (ctx) => {
     const tx = {
       from: recipient,
       to: TAMA_ROUTER_ADDRESS,
-      value: amountInWei, // 🔥 Ensures enough RON is sent
-      gas: 2000000,
-      gasPrice: gasPrice,
+      gas: gweiToWei,
       data: routerContract.methods.buyTokensWithETH(
         tokenOut,
         amountInWei,
         amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
-        WRON_ADDRESS,
+        RON_ADDRESS,
         Math.floor(Date.now() / 1000) + 60 * 10,
         "0x"
       ).encodeABI()
@@ -284,8 +282,8 @@ bot.action("confirm_sell", async (ctx) => {
     }
 
     // 🔥 Define Swap Path (Token → RON)
-    const WRON_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
-    const path = [tokenIn, WRON_ADDRESS];
+    const RON_ADDRESS = "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4"; // Wrapped RON
+    const path = [tokenIn, RON_ADDRESS];
 
     // ✅ Set Minimum Output (`amountOutMin`) for Slippage Protection
     const amountOutMin = web3.utils.toWei("0.0001", "ether"); // Adjust for slippage
