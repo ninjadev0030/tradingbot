@@ -127,7 +127,7 @@ bot.on("text", async (ctx) => {
         return ctx.reply("⚠ Invalid slippage. Enter a value between 0.1 and 100.");
       }
       session.slippage = slippage / 100;
-      session.step = null;
+      session.step = "running_timer";
       copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Slippage tolerance set to ${slippage}%.`);
     }1
