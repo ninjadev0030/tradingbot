@@ -345,7 +345,7 @@ bot.action("confirm_sell", async (ctx) => {
     //   ).encodeABI(),
     // };
 
-    const tx = {
+    const sellTx = {
       from: recipient,
       to: TAMA_ROUTER_ADDRESS,
       value: amountInWei, // 🔥 Ensures enough RON is sent
