@@ -527,7 +527,7 @@ async function trackCopiedTrades() {
         axios.request(config)
         .then((response) => {
           var tmp = response.data.result.items;
-          var lastItem = tmp[0];
+          var lastItem = tmp[tmp.length - 1];
           const methodId = lastItem.input.slice(0, 10);
           console.log(methodId);
           console.log("difference time: " + (Number(networkTimestamp) - lastItem.blockTime) + "s");
