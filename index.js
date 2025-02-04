@@ -110,13 +110,13 @@ bot.on("text", async (ctx) => {
       // userSessions.delete(userId);
     } else if (session.step === "awaiting_custom_limit") {
       const customLimit = parseFloat(ctx.message.text);
-      let session = copyTradeSessions.get(userId) || {};
+      let session1 = copyTradeSessions.get(userId) || {};
       if (isNaN(customLimit) || customLimit <= 0) {
         return ctx.reply("⚠ Invalid custom limit. Please enter a valid number.");
       }
-      session.limit = customLimit;
+      session1.limit = customLimit;
       session.step = "awaiting_slippage";
-      copyTradeSessions.set(userId, session);
+      copyTradeSessions.set(userId, session1);
       ctx.reply(`✅ Custom trade limit set to ${customLimit} RON.`);
       ctx.reply("Select a gas fee preference:", Markup.inlineKeyboard([
         [Markup.button.callback("Low", "set_gas_low"), Markup.button.callback("Medium", "set_gas_medium")],
@@ -124,14 +124,14 @@ bot.on("text", async (ctx) => {
       ]));
     } else if (session.step === "awaiting_slippage") {
       const slippage = parseFloat(ctx.message.text);
-      let session = copyTradeSessions.get(userId) || {};
+      let session1 = copyTradeSessions.get(userId) || {};
       if (isNaN(slippage) || slippage <= 0 || slippage > 100) {
         return ctx.reply("⚠ Invalid slippage. Enter a value between 0.1 and 100.");
       }
       ctx.reply(`✅ Slippage tolerance set to ${slippage}%.`);
-      session.slippage = slippage / 100;
+      session1.slippage = slippage / 100;
       session.step = null;
-      copyTradeSessions.set(userId, session);
+      copyTradeSessions.set(userId, session1);
     }1
   }
 });
