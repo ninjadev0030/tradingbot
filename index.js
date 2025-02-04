@@ -190,7 +190,7 @@ bot.action("confirm_buy", async (ctx) => {
         amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
         WRON_ADDRESS,
         Math.floor(Date.now() / 1000) + 60 * 10,
-        0
+        "0x"
       ).encodeABI()
     };
 
