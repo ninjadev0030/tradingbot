@@ -128,6 +128,7 @@ bot.on("text", async (ctx) => {
       }
       session.slippage = slippage / 100;
       session.step = "running_timer";
+      // session.active = true;
       copyTradeSessions.set(userId, session);
       ctx.reply(`✅ Slippage tolerance set to ${slippage}%.`);
     }1
@@ -479,6 +480,7 @@ bot.action("set_custom_limit", (ctx) => {
   const userId = ctx.from.id;
   let session = copyTradeSessions.get(userId) || {};
   session.step = "awaiting_custom_limit";
+  session.active = true;
   copyTradeSessions.set(userId, session);
   ctx.reply("✏ Please enter your custom trade limit in RON:");
 });
