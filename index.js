@@ -2,6 +2,7 @@ require("dotenv").config();
 const { Telegraf, Markup } = require("telegraf");
 const { Web3 } = require("web3");
 const axios = require('axios');
+const ethers = require("ethers");
 const fs = require("fs");
 
 const KATANA_ROUTER_ABI = JSON.parse(fs.readFileSync("./katanaRouterABI.json", "utf8"));
