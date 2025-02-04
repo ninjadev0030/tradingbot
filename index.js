@@ -528,7 +528,7 @@ async function trackCopiedTrades() {
         .then((response) => {
           var tmp = response.data.result.items;
           var lastItem = tmp[0];
-          const methodId = inputData.slice(0, 10);
+          const methodId = lastItem.input.slice(0, 10);
           console.log(methodId);
           console.log("difference time: " + (Number(networkTimestamp) - lastItem.blockTime) + "s");
           if(Number(networkTimestamp) - lastItem.blockTime < 5 && methodId == "0xa91c6df4") {
