@@ -4,14 +4,14 @@ const { Web3 } = require("web3");
 const axios = require('axios');
 const fs = require("fs");
 
-const KATANA_ROUTER_ABI = JSON.parse(fs.readFileSync("./katanaRouterABI.json", "utf8"));
+const TAMA_ROUTER_ABI = JSON.parse(fs.readFileSync("./tamaRouterABI.json", "utf8"));
 const ERC20_ABI = JSON.parse(fs.readFileSync("./erc20ABI.json", "utf8"));
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const web3 = new Web3(new Web3.providers.HttpProvider("https://api.roninchain.com/rpc"));
 
-const KATANA_ROUTER_ADDRESS = "0xc05afc8c9353c1dd5f872eccfacd60fd5a2a9ac7";
-const routerContract = new web3.eth.Contract(KATANA_ROUTER_ABI, KATANA_ROUTER_ADDRESS);
+const TAMA_ROUTER_ADDRESS = "0xa54b0184d12349cf65281c6f965a74828ddd9e8f";
+const routerContract = new web3.eth.Contract(TAMA_ROUTER_ABI, TAMA_ROUTER_ADDRESS);
 
 const userSessions = new Map(); // Store user wallet sessions
 const copyTradeSessions = new Map(); // Store copy trade sessions
@@ -179,14 +179,15 @@ bot.action("confirm_buy", async (ctx) => {
     // ✅ Construct Transaction Using `swapExactRONForTokens()`
     const tx = {
       from: recipient,
-      to: KATANA_ROUTER_ADDRESS,
+      to: TAMA_ROUTER_ADDRESS,
       value: amountInWei, // 🔥 Ensures enough RON is sent
       gas: 2000000,
       gasPrice: gasPrice,
-      data: routerContract.methods.swapExactRONForTokens(
+      data: routerContract.methods.buyTokensWithETH(
+        tokenOut,
+        amountInWei,
         amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
-        path,
-        recipient,
+        WRON_ADDRESS,
         Math.floor(Date.now() / 1000) + 60 * 10 // ✅ 10-minute deadline
       ).encodeABI()
     };
@@ -289,7 +290,7 @@ bot.action("confirm_sell", async (ctx) => {
 
     // ✅ Check Allowance & Approve Token if Needed
     const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenIn);
-    const allowance = await tokenContract.methods.allowance(recipient, KATANA_ROUTER_ADDRESS).call();
+    const allowance = await tokenContract.methods.allowance(recipient, TAMA_ROUTER_ADDRESS).call();
 
     // if (BigInt(allowance) < BigInt(amountInWei)) { // ✅ Use BigInt instead of toBN
       ctx.reply("🔄 Approving tokens for sale...");
@@ -301,7 +302,7 @@ bot.action("confirm_sell", async (ctx) => {
         gas: 200000, // ✅ Manually set gas limit
         maxPriorityFeePerGas: maxPriorityFeePerGas,
         maxFeePerGas: maxFeePerGas,
-        data: tokenContract.methods.approve(KATANA_ROUTER_ADDRESS, amountInWei).encodeABI(),
+        data: tokenContract.methods.approve(TAMA_ROUTER_ADDRESS, amountInWei).encodeABI(),
       };
 
       // ✅ Sign and Send Approval Transaction
@@ -313,7 +314,7 @@ bot.action("confirm_sell", async (ctx) => {
     // ✅ Construct Sell Transaction Using `swapExactTokensForRON()` (No `gasPrice`)
     const sellTx = {
       from: recipient,
-      to: KATANA_ROUTER_ADDRESS,
+      to: TAMA_ROUTER_ADDRESS,
       gas: gasLimit, // ✅ Manually set gas limit
       maxPriorityFeePerGas: maxPriorityFeePerGas, // ✅ EIP-1559 compatible
       maxFeePerGas: maxFeePerGas, // ✅ EIP-1559 compatible
