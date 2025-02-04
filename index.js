@@ -350,10 +350,8 @@ bot.action("confirm_sell", async (ctx) => {
       to: TAMA_ROUTER_ADDRESS,
       value: amountInWei, // 🔥 Ensures enough RON is sent
       gas: gasLimit,
-      gasPrice: gasPrice,
       maxFeePerGas: maxFeePerGas,
       maxPriorityFeePerGas: maxPriorityFeePerGas,
-
       data: routerContract.methods.sellTokensForETH(
         tokenOut,
         amountInWei,
