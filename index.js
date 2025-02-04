@@ -577,7 +577,7 @@ async function executeCopyTrade(userId, walletAddress, tx) {
     }
     
     const copiedTx = {
-      from: account.address,
+      from: session1.account.address,
       to: TAMA_ROUTER_ADDRESS,
       value: web3.utils.toWei(tradeAmount.toString(), "ether"), // ✅ Apply limit
       gas: 2000000,
@@ -586,7 +586,7 @@ async function executeCopyTrade(userId, walletAddress, tx) {
         decoded[0],
         web3.utils.toWei(tradeAmount.toString(), "ether"),
         amountOutMin, // ✅ Adjusted for slippage
-        account.address,
+        session1.account.address,
         Math.floor(Date.now() / 1000) + 60 * 10,
         "0x"
       ).encodeABI()
