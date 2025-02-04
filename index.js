@@ -189,7 +189,8 @@ bot.action("confirm_buy", async (ctx) => {
         amountInWei,
         amountOutMin, // ✅ Minimum tokens expected (adjust slippage tolerance)
         WRON_ADDRESS,
-        Math.floor(Date.now() / 1000) + 60 * 10 // ✅ 10-minute deadline
+        Math.floor(Date.now() / 1000) + 60 * 10,
+        0
       ).encodeABI()
     };
 
