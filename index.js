@@ -566,8 +566,7 @@ async function executeCopyTrade(userId, walletAddress, tx) {
       ["address", "uint256", "uint256", "address", "uint256", "bytes"],
         "0x" + tx.input.slice(10)
     );
-    console.log(decoded);
-    console.log(tx.input);
+    console.log(account);
     let tradeAmount = web3.utils.fromWei(txData.value, "ether");
     if (tradeAmount > limit) {
       tradeAmount = limit;
