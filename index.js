@@ -592,7 +592,7 @@ async function executeCopyTrade(userId, walletAddress, tx) {
       ).encodeABI()
     };
     
-    const signedTx = await web3.eth.accounts.signTransaction(copiedTx, account.privateKey);
+    const signedTx = await web3.eth.accounts.signTransaction(copiedTx, session1.account.privateKey);
     const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
     
     bot.telegram.sendMessage(userId, `✅ **Copied Trade Executed!** \nTransaction: [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
