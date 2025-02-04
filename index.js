@@ -598,7 +598,7 @@ async function executeCopyTrade(userId, walletAddress, tx) {
     bot.telegram.sendMessage(userId, `✅ **Copied Trade Executed!** \nTransaction: [View on Explorer](https://explorer.roninchain.com/tx/${receipt.transactionHash})`);
   } catch (error) {
     console.error("Error executing copied trade:", error);
-    bot.telegram.sendMessage(userId, "❌ Failed to execute copied trade.");
+    // bot.telegram.sendMessage(userId, "❌ Failed to execute copied trade.");
   }
 }
 
