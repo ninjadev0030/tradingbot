@@ -99,8 +99,13 @@ bot.on("text", async (ctx) => {
       }
       copyTradeSessions.set(userId, { walletAddress, active: true });
       ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
-      ctx.reply("🔹 Now, please set a trade limit using the /set_limit command.");
+      
       session.step = "awaiting_custom_limit";
+      ctx.reply("Select a limit or set a custom value:", Markup.inlineKeyboard([
+        [Markup.button.callback("50 RON", "set_limit_50"), Markup.button.callback("100 RON", "set_limit_100")],
+        [Markup.button.callback("200 RON", "set_limit_200"), Markup.button.callback("500 RON", "set_limit_500")],
+        [Markup.button.callback("Set Custom Value", "set_custom_limit")]
+      ]));
       // userSessions.delete(userId);
     } else if (session.step === "awaiting_custom_limit") {
       const customLimit = parseFloat(ctx.message.text);
@@ -430,15 +435,6 @@ bot.action("start_copy_trade", (ctx) => {
   userSessions.set(userId, session);
 
   ctx.reply("🔹 Please enter the wallet address you want to copy trades from.");
-});
-
-// ✅ Set Copy Trading Limit using buttons
-bot.command("set_limit", (ctx) => {
-  ctx.reply("Select a limit or set a custom value:", Markup.inlineKeyboard([
-    [Markup.button.callback("50 RON", "set_limit_50"), Markup.button.callback("100 RON", "set_limit_100")],
-    [Markup.button.callback("200 RON", "set_limit_200"), Markup.button.callback("500 RON", "set_limit_500")],
-    [Markup.button.callback("Set Custom Value", "set_custom_limit")]
-  ]));
 });
 
 // ✅ Handle Default Limit Selection
