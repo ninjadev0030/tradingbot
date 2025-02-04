@@ -100,6 +100,7 @@ bot.on("text", async (ctx) => {
       copyTradeSessions.set(userId, { walletAddress, active: true });
       ctx.reply(`✅ Copy trade activated for wallet: \`${walletAddress}\``);
       ctx.reply("🔹 Now, please set a trade limit using the /set_limit command.");
+      session.step = "awaiting_limit_selection";
       // userSessions.delete(userId);
     } else if (session.step === "awaiting_custom_limit" || session.step === "awaiting_limit_selection") {
       const customLimit = parseFloat(ctx.message.text);
